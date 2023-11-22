@@ -74,6 +74,7 @@ def calc_collision_angle(suf: Surface, part: Particle) -> float:
 
 
 def calc_main_out_vec(suf: Surface, part: Particle, c_param: np.ndarray) -> np.ndarray:
+    # Reference: http://www.info.hiroshima-cu.ac.jp/~miyazaki/knowledge/tech0007.html
     e1, e2, c = c_param
     c_point = np.sum(suf.get_basis() * np.array([[e1], [e2]]), axis=0) + suf.get_origin()
     
