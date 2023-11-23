@@ -4,6 +4,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
+def normalize(vec: np.ndarray) -> np.ndarray:
+    return vec / np.linalg.norm(vec)
+
+
 class Particle:
     def __init__(self, pos: np.ndarray, vec: np.ndarray, intensity: float = 1.0):
         self._pos = pos
@@ -73,41 +77,66 @@ def calc_collision_angle(suf: Surface, part: Particle) -> float:
     return np.arccos(np.abs(cos_theta))
 
 
+def rotate_vector(vec: np.ndarray, normalized_axial: np.ndarray, radian: float) -> np.ndarray:
+    r = np.array([
+        [0, -normalized_axial[2], normalized_axial[1]],
+        [normalized_axial[2], 0,  -normalized_axial[0]],
+        [-normalized_axial[2], normalized_axial[0], 0]
+    ])
+    m = np.eye(3) + np.sin(radian) * r + (1 - np.cos(radian)) * np.dot(r, r)
+    qm = np.eye(4)
+    qm[0:3, 0:3] = m
+
+    qv = np.ones(4)
+    qv[0:3] = vec
+    print(np.linalg.det(qm))
+    return np.dot(qm, qv)[0:3]
+
+
 def calc_main_out_vec(suf: Surface, part: Particle, c_param: np.ndarray) -> np.ndarray:
     # Reference: http://www.info.hiroshima-cu.ac.jp/~miyazaki/knowledge/tech0007.html
     e1, e2, c = c_param
     c_point = np.sum(suf.get_basis() * np.array([[e1], [e2]]), axis=0) + suf.get_origin()
-    
-
-
-def plot(parts: list[Particle], angs: list[float]):
-    pos = np.array([part.get_pos() for part in parts])
-    vec = np.array([part.get_vec() for part in parts])
-    plt.quiver(pos[:, 0], pos[:, 1], vec[:, 0], vec[:, 1], angs, units='x', scale=np.linalg.norm(vec))
-    plt.xlim([0, 1])
-    plt.ylim([0, 1])
-    plt.show()
+    norm = normalize(suf.get_norm_vec())
 
 
 if __name__ == "__main__":
-    surface = SmoothSurface(
-        1111,
-        np.array([0, 1, 0]),
-        np.array([0, 1, 1]),
-        np.array([100, 1, 0]),
-    )
+    import importlib
+    import plot
+    importlib.reload(plot)
 
-    particles = []
-    angles = []
-    while len(particles) < 20:
-        particle = Particle(np.zeros(3), np.random.random(3))
+    # surface = SmoothSurface(
+    #     1111,
+    #     np.array([0, 1, 0]),
+    #     np.array([0, 1, 1]),
+    #     np.array([100, 1, 0]),
+    # )
+    #
+    # particles = []
+    # angles = []
+    # while len(particles) < 20:
+    #     particle = Particle(np.zeros(3), np.random.random(3))
+    #
+    #     collision_param = calc_collision_param(surface, particle)
+    #     if do_collision(collision_param):
+    #         ang = calc_collision_angle(surface, particle)
+    #         particles.append(particle)
+    #         angles.append(ang)
+    #
+    #         ret = calc_main_out_vec(surface, particle, collision_param)
 
-        collision_param = calc_collision_param(surface, particle)
-        if do_collision(collision_param):
-            ang = calc_collision_angle(surface, particle)
-            particles.append(particle)
-            angles.append(ang)
+    n = normalize(np.ones(3))
+    v = normalize(np.random.random(3))
+    vectors = []
+    for ang in np.linspace(0, np.pi, 20):
+        rv = rotate_vector(v, n, ang)
+        vectors.append(rv)
 
-            ret = calc_main_out_vec(surface, particle, collision_param)
+    colors = ["red"] * len(vectors)
+    colors.append("k")
 
-    plot(particles, angles)
+    vectors.append(n)
+    vectors = np.array(vectors)
+    locations = np.zeros((len(vectors), 3))
+
+    plot.vector(vectors, locations, colors)
