@@ -89,7 +89,7 @@ class Surface(metaclass=abc.ABCMeta):
         return self._index
 
     @abc.abstractmethod
-    def get_collision_particle(self, num: int, in_part: Particle, collision_angle: float) -> list[Particle]:
+    def get_collision_particle(self, in_part: Particle, num: int, c_param: np.ndarray) -> list[Particle]:
         pass
 
 
@@ -99,6 +99,47 @@ class SmoothSurface(Surface):
         c_point = np.sum(self.get_basis() * np.array([[e1], [e2]]), axis=0) + self.get_origin()
         out_vec = calc_main_out_vec(self, in_part)
         return [Particle(c_point, out_vec, in_part.get_ids_with_self(), in_part.get_intensity())]
+
+
+class RoughSurface(Surface):
+    SAMPLE_COEF = np.array([np.pi * 0.5, 1], dtype=np.float32)
+
+    @staticmethod
+    def _sample_from_cos_distribution(size: int) -> np.ndarray:
+        # TODO: low efficiency
+        samples = np.zeros(size)
+
+        for index in range(size):
+            while True:
+                angle, value = np.random.random(2) * RoughSurface.SAMPLE_COEF
+                if angle > value:
+                    samples[index] = angle
+                    break
+        return samples
+
+    def get_collision_particle(self, in_part: Particle, num: int, c_param: np.ndarray) -> list[Particle]:
+        e1, e2, c = c_param
+        rel_c_point = np.sum(self.get_basis() * np.array([[e1], [e2]]), axis=0)
+        c_point = rel_c_point + self.get_origin()
+
+        # azimuth, from uniform distribution
+        phi = np.random.random(num) * 2 * np.pi
+        # zenith, from cosine distribution
+        theta = self._sample_from_cos_distribution(num)
+
+        normalized_norm = -normalize(self.get_norm_vec())
+        c_point_to_origin_vec = -normalize(rel_c_point)
+
+        out_particles = []
+        child_intensity = in_part.get_intensity() / num
+        for ii in range(num):
+            zenith_rotation_axial_vec = rotate_vector(c_point_to_origin_vec, normalized_norm, float(phi[ii]))
+            out_vec = rotate_vector(normalized_norm, zenith_rotation_axial_vec, float(theta[ii]))
+            out_particles.append(
+                Particle(c_point, out_vec, in_part.get_ids_with_self(), child_intensity)
+            )
+
+        return out_particles
 
 
 def calc_collision_param(suf: Surface, part: Particle) -> np.ndarray:
@@ -155,7 +196,7 @@ if __name__ == "__main__":
 
     importlib.reload(plot)
 
-    surface = SmoothSurface(
+    surface = RoughSurface(
         1111,
         np.array([0, 1, 0]),
         np.array([0, 1, 1]),
@@ -167,7 +208,7 @@ if __name__ == "__main__":
     for particle in particles:
         collision_param = calc_collision_param(surface, particle)
         if do_collision(collision_param):
-            child_particles += surface.get_collision_particle(particle, 1, collision_param)
+            child_particles += surface.get_collision_particle(particle, 4, collision_param)
 
     colors = ["red"] * len(particles) + ["green"] * len(child_particles)
     vectors = np.array([p.get_vec() for p in particles + child_particles])
