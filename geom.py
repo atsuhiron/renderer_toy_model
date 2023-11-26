@@ -3,6 +3,7 @@ from typing import Iterable
 import abc
 import uuid
 
+import matplotlib.pyplot as plt
 import numpy as np
 
 
@@ -130,6 +131,7 @@ class RoughSurface(Surface):
         # zenith, from cosine distribution
         theta = self._sample_from_cos_distribution(num)
 
+        # TODO: 向きは本来 Surface と Point の位置関係次第なので固定ではない
         normalized_norm = -normalize(self.get_norm_vec())
         c_point_to_origin_vec = -normalize(rel_c_point)
 
@@ -199,25 +201,39 @@ if __name__ == "__main__":
 
     importlib.reload(plot)
 
+    _y = 12
     surface = RoughSurface(
         1111,
-        np.array([12, 1, 0]),
+        # np.array([_y, 1, 0]),
         np.array([0, 1, 0]),
         np.array([0, 1, 1]),
-
+        np.array([_y, 1, 0]),
     )
 
+    np.random.seed(24)
     particles = [Particle(np.zeros(3), np.random.random(3)) for _ in range(20)]
     child_particles = []
+    cp_arr = []
     for particle in particles:
         collision_param = calc_collision_param(surface, particle)
+        cp_arr.append(collision_param)
         if do_collision(collision_param):
             child_particles += surface.get_collision_particle(particle, 4, collision_param)
-
+    cp_arr = np.array(cp_arr)
     colors = ["red"] * len(particles) + ["green"] * len(child_particles)
     vectors = np.array([p.get_vec() for p in particles + child_particles])
     locations = np.array([p.get_pos() for p in particles + child_particles])
-    plot.vector(vectors, locations, colors, [surface.get_points()])
+    # plot.vector(vectors, locations, colors, [surface.get_points()])
+
+    org = surface.get_origin()[::2]
+    basis = surface.get_basis()[:, ::2]
+    plt.plot(surface.get_points()[:, 0], surface.get_points()[:, 2])
+    for cp in cp_arr:
+        _rel_c_point = np.sum(basis * np.array([[cp[0]], [cp[1]]]), axis=0)
+        _c_point = _rel_c_point + org
+        plt.plot([_c_point[0]], [_c_point[1]], "o", label=f"{cp[0]:.3f}")
+    plt.legend()
+    plt.show()
 
     # n = normalize(np.ones(3))
     # v = normalize(np.random.random(3))
