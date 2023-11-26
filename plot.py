@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import mpl_toolkits.mplot3d.art3d as art3d
 import numpy as np
 
 
@@ -21,7 +22,7 @@ def _set_lims(ax: plt.Axes, vectors: np.ndarray, locations: np.ndarray):
     ax.grid()
 
 
-def vector(vectors: np.ndarray, locations: np.ndarray, colors: list[str]):
+def vector(vectors: np.ndarray, locations: np.ndarray, colors: list[str], surfaces: list[np.ndarray]):
     assert vectors.ndim == 2
     assert locations.ndim == 2
 
@@ -32,4 +33,8 @@ def vector(vectors: np.ndarray, locations: np.ndarray, colors: list[str]):
 
     for v, loc, col in zip(vectors, locations, colors):
         _plot_vector_3d(ax, loc, v, col)
+
+    for suf in surfaces:
+        ax.add_collection3d(art3d.Poly3DCollection([suf], alpha=0.3))
+
     plt.show()

@@ -88,6 +88,9 @@ class Surface(metaclass=abc.ABCMeta):
     def get_index(self) -> int:
         return self._index
 
+    def get_points(self) -> np.ndarray:
+        return self._points
+
     @abc.abstractmethod
     def get_collision_particle(self, in_part: Particle, num: int, c_param: np.ndarray) -> list[Particle]:
         pass
@@ -198,9 +201,10 @@ if __name__ == "__main__":
 
     surface = RoughSurface(
         1111,
+        np.array([12, 1, 0]),
         np.array([0, 1, 0]),
         np.array([0, 1, 1]),
-        np.array([100, 1, 0]),
+
     )
 
     particles = [Particle(np.zeros(3), np.random.random(3)) for _ in range(20)]
@@ -213,7 +217,7 @@ if __name__ == "__main__":
     colors = ["red"] * len(particles) + ["green"] * len(child_particles)
     vectors = np.array([p.get_vec() for p in particles + child_particles])
     locations = np.array([p.get_pos() for p in particles + child_particles])
-    plot.vector(vectors, locations, colors)
+    plot.vector(vectors, locations, colors, [surface.get_points()])
 
     # n = normalize(np.ones(3))
     # v = normalize(np.random.random(3))
