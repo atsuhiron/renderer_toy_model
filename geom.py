@@ -131,8 +131,10 @@ class RoughSurface(Surface):
         # zenith, from cosine distribution
         theta = self._sample_from_cos_distribution(num)
 
-        # TODO: 向きは本来 Surface と Point の位置関係次第なので固定ではない
-        normalized_norm = -normalize(self.get_norm_vec())
+        normalized_norm = normalize(self.get_norm_vec())
+        if np.dot(normalized_norm, in_part.get_vec()) > 0:
+            normalized_norm *= -1
+
         c_point_to_origin_vec = -normalize(rel_c_point)
 
         out_particles = []
@@ -201,13 +203,12 @@ if __name__ == "__main__":
 
     importlib.reload(plot)
 
-    _y = 12
     surface = RoughSurface(
         1111,
-        # np.array([_y, 1, 0]),
-        np.array([0, 1, 0]),
-        np.array([0, 1, 1]),
-        np.array([_y, 1, 0]),
+        np.array([0.5, 1, 1]),
+        np.array([0.5, 1, 0]),
+        np.array([np.sqrt(3)/2 + 0.5, 1, 0.5]),
+        # np.array([0.5, 1, 1]),
     )
 
     np.random.seed(24)
@@ -223,7 +224,7 @@ if __name__ == "__main__":
     colors = ["red"] * len(particles) + ["green"] * len(child_particles)
     vectors = np.array([p.get_vec() for p in particles + child_particles])
     locations = np.array([p.get_pos() for p in particles + child_particles])
-    # plot.vector(vectors, locations, colors, [surface.get_points()])
+    plot.vector(vectors, locations, colors, [surface.get_points()])
 
     org = surface.get_origin()[::2]
     basis = surface.get_basis()[:, ::2]
