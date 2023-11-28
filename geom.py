@@ -13,7 +13,7 @@ def normalize(vec: np.ndarray) -> np.ndarray:
 
 class Particle:
     def __init__(self, pos: np.ndarray, vec: np.ndarray,
-                 parent_ids: list[str] = None, intensity: float = 1.0):
+                 parent_ids: list[str] = None, intensity: float = 1.0, color: np.ndarray = None):
         self._uuid = uuid.uuid1()
         self._pos = pos
         self._vec = vec
@@ -26,6 +26,11 @@ class Particle:
         else:
             self._parents_ids = parent_ids
             self._generation = 1 + len(parent_ids)
+
+        if color is None:
+            self._color = np.zeros(3, dtype=np.float32)
+        else:
+            self._color = color
 
     def __str__(self) -> str:
         p = self._fmt_list(self._pos)
@@ -54,6 +59,9 @@ class Particle:
 
     def set_terminated(self, is_terminated: bool):
         self._terminated = is_terminated
+
+    def get_color(self) -> np.ndarray:
+        return self._color
 
     @staticmethod
     def _fmt(val: int | float) -> str:
@@ -95,6 +103,10 @@ class Surface(metaclass=abc.ABCMeta):
     def get_points(self) -> np.ndarray:
         return self._points
 
+    def calc_relative_c_point(self, c_param: np.ndarray) -> np.ndarray:
+        e1, e2, c = c_param
+        return np.sum(self.get_basis() * np.array([[e1], [e2]]), axis=0)
+
     @abc.abstractmethod
     def get_collision_particle(self, in_part: Particle, num: int, c_param: np.ndarray) -> list[Particle]:
         pass
@@ -102,8 +114,7 @@ class Surface(metaclass=abc.ABCMeta):
 
 class SmoothSurface(Surface):
     def get_collision_particle(self, in_part: Particle, num: int, c_param: np.ndarray) -> list[Particle]:
-        e1, e2, c = c_param
-        c_point = np.sum(self.get_basis() * np.array([[e1], [e2]]), axis=0) + self.get_origin()
+        c_point = self.calc_relative_c_point(c_param) + self.get_origin()
         out_vec = calc_main_out_vec(self, in_part)
         return [Particle(c_point, out_vec, in_part.get_ids_with_self(), in_part.get_intensity())]
 
@@ -125,8 +136,7 @@ class RoughSurface(Surface):
         return samples
 
     def get_collision_particle(self, in_part: Particle, num: int, c_param: np.ndarray) -> list[Particle]:
-        e1, e2, c = c_param
-        rel_c_point = np.sum(self.get_basis() * np.array([[e1], [e2]]), axis=0)
+        rel_c_point = self.calc_relative_c_point(c_param)
         c_point = rel_c_point + self.get_origin()
 
         # azimuth, from uniform distribution
@@ -150,6 +160,17 @@ class RoughSurface(Surface):
             )
 
         return out_particles
+
+
+class LightSurface(Surface):
+    def __init__(self, index: int, point1: np.ndarray, point2: np.ndarray, point3: np.ndarray, color: np.ndarray):
+        super().__init__(index, point1, point2, point3)
+        self.color = color
+
+    def get_collision_particle(self, in_part: Particle, num: int, c_param: np.ndarray) -> list[Particle]:
+        c_point = self.calc_relative_c_point(c_param) + self.get_origin()
+        out_vec = -in_part.get_vec()
+        return [Particle(c_point, out_vec, in_part.get_ids_with_self(), in_part.get_intensity(), self.color)]
 
 
 def calc_collision_param(suf: Surface, part: Particle) -> np.ndarray:
@@ -207,13 +228,14 @@ if __name__ == "__main__":
     import plot
 
     importlib.reload(plot)
-
-    surface = RoughSurface(
+    _y = 12
+    surface = LightSurface(
         1111,
-        np.array([0.5, 1, 1]),
-        np.array([0.5, 1, 0]),
-        np.array([np.sqrt(3)/2 + 0.5, 1, 0.5]),
-        # np.array([0.5, 1, 1]),
+        np.array([_y, 1, 0]),
+        np.array([0, 1, 0]),
+        np.array([0, 1, 1]),
+        # np.array([_y, 1, 0]),
+        color=np.array([42, 53, 9], dtype=np.float32)
     )
 
     np.random.seed(24)
