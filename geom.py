@@ -79,6 +79,9 @@ class Surface(metaclass=abc.ABCMeta):
     def get_basis(self) -> np.ndarray:
         return np.array([self._points[1] - self._points[0], self._points[2] - self._points[0]])
 
+    def get_basis_norm(self) -> np.ndarray:
+        return np.linalg.norm(self.get_basis(), axis=1)
+
     def get_origin(self) -> np.ndarray:
         return self._points[0]
 
@@ -155,8 +158,10 @@ def calc_collision_param(suf: Surface, part: Particle) -> np.ndarray:
     return np.linalg.solve(a, b)
 
 
-def do_collision(c_param: np.ndarray) -> bool:
+def do_collision(c_param: np.ndarray, basis_norm: np.ndarray) -> bool:
     e1, e2, c = c_param
+    e1 /= basis_norm[0]
+    e2 /= basis_norm[1]
 
     if e1 < 0 or e2 < 0:
         return False
@@ -218,7 +223,7 @@ if __name__ == "__main__":
     for particle in particles:
         collision_param = calc_collision_param(surface, particle)
         cp_arr.append(collision_param)
-        if do_collision(collision_param):
+        if do_collision(collision_param, surface.get_basis_norm()):
             child_particles += surface.get_collision_particle(particle, 4, collision_param)
     cp_arr = np.array(cp_arr)
     colors = ["red"] * len(particles) + ["green"] * len(child_particles)
