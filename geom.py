@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Iterable
 
 import abc
@@ -13,12 +14,13 @@ def normalize(vec: np.ndarray) -> np.ndarray:
 
 class Particle:
     def __init__(self, pos: np.ndarray, vec: np.ndarray,
-                 parent_ids: list[str] = None, intensity: float = 1.0, color: np.ndarray = None):
+                 parent_ids: list[str] = None, intensity: float = 1.0, color: np.ndarray = None,
+                 is_terminated: bool = False):
         self._uuid = uuid.uuid1()
         self._pos = pos
         self._vec = vec
         self._intensity = intensity
-        self._terminated = False
+        self._terminated = is_terminated
 
         if parent_ids is None:
             self._parents_ids = []
@@ -48,17 +50,16 @@ class Particle:
     def get_intensity(self) -> float:
         return self._intensity
 
-    def get_id(self) -> str:
-        return str(self._uuid)
-
-    def get_ids_with_self(self) -> list[str]:
-        return self._parents_ids + [self.get_id()]
+    def get_parent_ids(self, contain_self: bool = True) -> list[str]:
+        if contain_self:
+            return self._parents_ids + [str(self._uuid)]
+        return self._parents_ids
 
     def get_generation(self) -> int:
         return self._generation
 
-    def set_terminated(self, is_terminated: bool):
-        self._terminated = is_terminated
+    def is_terminated(self) -> bool:
+        return self._terminated
 
     def get_color(self) -> np.ndarray:
         return self._color
@@ -77,6 +78,14 @@ class Particle:
     def _fmt_list(vals: Iterable) -> str:
         str_list = [Particle._fmt(v) for v in vals]
         return "[" + ", ".join(str_list) + "]"
+
+    @staticmethod
+    def create_terminated_particle(source: Particle, color: np.ndarray) -> Particle:
+        return Particle(source.get_pos(),
+                        source.get_vec(),
+                        source.get_parent_ids(contain_self=False),
+                        source.get_intensity(),
+                        color)
 
 
 class Surface(metaclass=abc.ABCMeta):
@@ -116,7 +125,7 @@ class SmoothSurface(Surface):
     def get_collision_particle(self, in_part: Particle, num: int, c_param: np.ndarray) -> list[Particle]:
         c_point = self.calc_relative_c_point(c_param) + self.get_origin()
         out_vec = calc_main_out_vec(self, in_part)
-        return [Particle(c_point, out_vec, in_part.get_ids_with_self(), in_part.get_intensity())]
+        return [Particle(c_point, out_vec, in_part.get_parent_ids(), in_part.get_intensity())]
 
 
 class RoughSurface(Surface):
@@ -156,7 +165,7 @@ class RoughSurface(Surface):
             zenith_rotation_axial_vec = rotate_vector(c_point_to_origin_vec, normalized_norm, float(phi[ii]))
             out_vec = rotate_vector(normalized_norm, zenith_rotation_axial_vec, float(theta[ii]))
             out_particles.append(
-                Particle(c_point, out_vec, in_part.get_ids_with_self(), child_intensity)
+                Particle(c_point, out_vec, in_part.get_parent_ids(), child_intensity)
             )
 
         return out_particles
@@ -168,9 +177,7 @@ class LightSurface(Surface):
         self.color = color
 
     def get_collision_particle(self, in_part: Particle, num: int, c_param: np.ndarray) -> list[Particle]:
-        c_point = self.calc_relative_c_point(c_param) + self.get_origin()
-        out_vec = -in_part.get_vec()
-        return [Particle(c_point, out_vec, in_part.get_ids_with_self(), in_part.get_intensity(), self.color)]
+        return [Particle.create_terminated_particle(in_part, self.color)]
 
 
 def calc_collision_param(suf: Surface, part: Particle) -> np.ndarray:
