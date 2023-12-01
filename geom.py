@@ -232,7 +232,7 @@ def calc_main_out_vec(suf: Surface, part: Particle) -> np.ndarray:
 
 if __name__ == "__main__":
     import importlib
-    import plot
+    import viewer
 
     importlib.reload(plot)
     _y = 12
