@@ -38,3 +38,15 @@ def vector(vectors: np.ndarray, locations: np.ndarray, colors: list[str], surfac
         ax.add_collection3d(art3d.Poly3DCollection([suf], alpha=0.3))
 
     plt.show()
+
+
+def plot_color_arr(colors: list[np.ndarray]):
+    size = 20
+    arr = np.ones((size, size * len(colors), 3), dtype=np.uint8)
+
+    for ci in range(len(colors)):
+        color = (colors[ci] * 255).astype(np.uint8)
+        arr[:, ci * size: (ci + 1) * size, :] *= color[np.newaxis, np.newaxis, :]
+
+    plt.imshow(arr)
+    plt.show()
