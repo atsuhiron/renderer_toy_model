@@ -234,7 +234,7 @@ if __name__ == "__main__":
     import importlib
     import viewer
 
-    importlib.reload(plot)
+    importlib.reload(viewer)
     _y = 12
     surface = LightSurface(
         1111,
@@ -258,7 +258,7 @@ if __name__ == "__main__":
     colors = ["red"] * len(particles) + ["green"] * len(child_particles)
     vectors = np.array([p.get_vec() for p in particles + child_particles])
     locations = np.array([p.get_pos() for p in particles + child_particles])
-    plot.vector(vectors, locations, colors, [surface.get_points()])
+    viewer.vector(vectors, locations, colors, [surface.get_points()])
 
     org = surface.get_origin()[::2]
     basis = surface.get_basis()[:, ::2]
