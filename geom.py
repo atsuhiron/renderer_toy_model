@@ -1,11 +1,12 @@
 from __future__ import annotations
 from typing import Iterable
-
 import abc
 import uuid
 
 import matplotlib.pyplot as plt
 import numpy as np
+
+import chromatic
 
 
 def normalize(vec: np.ndarray) -> np.ndarray:
@@ -14,7 +15,7 @@ def normalize(vec: np.ndarray) -> np.ndarray:
 
 class Particle:
     def __init__(self, pos: np.ndarray, vec: np.ndarray,
-                 parent_ids: list[str] = None, intensity: float = 1.0, color: np.ndarray = None,
+                 parent_ids: list[str] = None, intensity: float = 1.0, light: chromatic.CLight = None,
                  is_terminated: bool = False):
         self._uuid = uuid.uuid1()
         self._pos = pos
@@ -29,10 +30,10 @@ class Particle:
             self._parents_ids = parent_ids
             self._generation = 1 + len(parent_ids)
 
-        if color is None:
-            self._color = np.zeros(3, dtype=np.float32)
+        if light is None:
+            self._light = chromatic.CLight(np.ones(3, dtype=np.float32))
         else:
-            self._color = color
+            self._light = light
 
     def __str__(self) -> str:
         p = self._fmt_list(self._pos)
@@ -62,7 +63,7 @@ class Particle:
         return self._terminated
 
     def get_color(self) -> np.ndarray:
-        return self._color
+        return self._light.to_color().get_array()
 
     @staticmethod
     def _fmt(val: int | float) -> str:
@@ -80,18 +81,18 @@ class Particle:
         return "[" + ", ".join(str_list) + "]"
 
     @staticmethod
-    def create_terminated_particle(source: Particle, color: np.ndarray) -> Particle:
+    def create_terminated_particle(source: Particle, light_element: np.ndarray) -> Particle:
         return Particle(source.get_pos(),
                         source.get_vec(),
                         source.get_parent_ids(contain_self=False),
                         source.get_intensity(),
-                        color)
+                        chromatic.CLight(light_element))
 
 
 class Surface(metaclass=abc.ABCMeta):
-    def __init__(self, index: int, point1: np.ndarray, point2: np.ndarray, point3: np.ndarray):
+    def __init__(self, point1: np.ndarray, point2: np.ndarray, point3: np.ndarray):
         self._points = np.array([point1, point2, point3], dtype=np.float32)
-        self._index = index
+        self._uuid = uuid.uuid1()
 
     def get_basis(self) -> np.ndarray:
         return np.array([self._points[1] - self._points[0], self._points[2] - self._points[0]])
@@ -106,8 +107,8 @@ class Surface(metaclass=abc.ABCMeta):
         e1, e2 = self.get_basis()
         return np.cross(e1, e2)
 
-    def get_index(self) -> int:
-        return self._index
+    def get_id(self) -> str:
+        return str(self._uuid)
 
     def get_points(self) -> np.ndarray:
         return self._points
@@ -130,6 +131,10 @@ class SmoothSurface(Surface):
 
 class RoughSurface(Surface):
     SAMPLE_COEF = np.array([np.pi * 0.5, 1], dtype=np.float32)
+
+    def __init__(self, point1: np.ndarray, point2: np.ndarray, point3: np.ndarray, color: chromatic.CColor):
+        super().__init__(point1, point2, point3)
+        self._color = color
 
     @staticmethod
     def _sample_from_cos_distribution(size: int) -> np.ndarray:
@@ -172,12 +177,12 @@ class RoughSurface(Surface):
 
 
 class LightSurface(Surface):
-    def __init__(self, index: int, point1: np.ndarray, point2: np.ndarray, point3: np.ndarray, color: np.ndarray):
-        super().__init__(index, point1, point2, point3)
-        self.color = color
+    def __init__(self, point1: np.ndarray, point2: np.ndarray, point3: np.ndarray, light: chromatic.CLight):
+        super().__init__(point1, point2, point3)
+        self._light = light
 
     def get_collision_particle(self, in_part: Particle, num: int, c_param: np.ndarray) -> list[Particle]:
-        return [Particle.create_terminated_particle(in_part, self.color)]
+        return [Particle.create_terminated_particle(in_part, self._light.get_array())]
 
 
 def calc_collision_param(suf: Surface, part: Particle) -> np.ndarray:
@@ -237,12 +242,11 @@ if __name__ == "__main__":
     importlib.reload(viewer)
     _y = 12
     surface = LightSurface(
-        1111,
         np.array([_y, 1, 0]),
         np.array([0, 1, 0]),
         np.array([0, 1, 1]),
         # np.array([_y, 1, 0]),
-        color=np.array([42, 53, 9], dtype=np.float32)
+        light=chromatic.CLight(np.array([42, 53, 9], dtype=np.float32)/255)
     )
 
     np.random.seed(24)
