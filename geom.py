@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import Iterable
+from typing import Any
 import abc
 import uuid
 
@@ -128,6 +129,13 @@ class SmoothSurface(Surface):
         out_vec = calc_main_out_vec(self, in_part)
         return [Particle(c_point, out_vec, in_part.get_parent_ids(), in_part.get_intensity())]
 
+    @staticmethod
+    def from_dict(surface_dict: dict[str, Any]) -> SmoothSurface:
+        p1 = np.array(surface_dict["point1"])
+        p2 = np.array(surface_dict["point2"])
+        p3 = np.array(surface_dict["point3"])
+        return SmoothSurface(p1, p2, p3)
+
 
 class RoughSurface(Surface):
     SAMPLE_COEF = np.array([np.pi * 0.5, 1], dtype=np.float32)
@@ -174,6 +182,14 @@ class RoughSurface(Surface):
             )
 
         return out_particles
+
+    @staticmethod
+    def from_dict(surface_dict: dict[str, Any]) -> RoughSurface:
+        p1 = np.array(surface_dict["point1"])
+        p2 = np.array(surface_dict["point2"])
+        p3 = np.array(surface_dict["point3"])
+        color = chromatic.CColor(np.array(surface_dict["color"]))
+        return RoughSurface(p1, p2, p3, color)
 
 
 class LightSurface(Surface):
