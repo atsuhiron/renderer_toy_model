@@ -94,6 +94,7 @@ class Surface(metaclass=abc.ABCMeta):
     def __init__(self, point1: np.ndarray, point2: np.ndarray, point3: np.ndarray):
         self._points = np.array([point1, point2, point3], dtype=np.float32)
         self._uuid = uuid.uuid1()
+        self._surface_type = self.get_surface_type()
 
     def get_basis(self) -> np.ndarray:
         return np.array([self._points[1] - self._points[0], self._points[2] - self._points[0]])
@@ -118,6 +119,11 @@ class Surface(metaclass=abc.ABCMeta):
         e1, e2, c = c_param
         return np.sum(self.get_basis() * np.array([[e1], [e2]]), axis=0)
 
+    @staticmethod
+    @abc.abstractmethod
+    def get_surface_type() -> str:
+        pass
+
     @abc.abstractmethod
     def get_collision_particle(self, in_part: Particle, num: int, c_param: np.ndarray) -> list[Particle]:
         pass
@@ -128,6 +134,10 @@ class SmoothSurface(Surface):
         c_point = self.calc_relative_c_point(c_param) + self.get_origin()
         out_vec = calc_main_out_vec(self, in_part)
         return [Particle(c_point, out_vec, in_part.get_parent_ids(), in_part.get_intensity())]
+
+    @staticmethod
+    def get_surface_type() -> str:
+        return "smooth"
 
     @staticmethod
     def from_dict(surface_dict: dict[str, Any]) -> SmoothSurface:
@@ -184,6 +194,10 @@ class RoughSurface(Surface):
         return out_particles
 
     @staticmethod
+    def get_surface_type() -> str:
+        return "rough"
+
+    @staticmethod
     def from_dict(surface_dict: dict[str, Any]) -> RoughSurface:
         p1 = np.array(surface_dict["point1"])
         p2 = np.array(surface_dict["point2"])
@@ -199,6 +213,18 @@ class LightSurface(Surface):
 
     def get_collision_particle(self, in_part: Particle, num: int, c_param: np.ndarray) -> list[Particle]:
         return [Particle.create_terminated_particle(in_part, self._light.get_array())]
+
+    @staticmethod
+    def get_surface_type() -> str:
+        return "light"
+
+    @staticmethod
+    def from_dict(surface_dict: dict[str, Any]) -> LightSurface:
+        p1 = np.array(surface_dict["point1"])
+        p2 = np.array(surface_dict["point2"])
+        p3 = np.array(surface_dict["point3"])
+        light = chromatic.CLight(np.array(surface_dict["light"]))
+        return LightSurface(p1, p2, p3, light)
 
 
 def calc_collision_param(suf: Surface, part: Particle) -> np.ndarray:
