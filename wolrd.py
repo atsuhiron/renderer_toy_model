@@ -46,20 +46,23 @@ if __name__ == "__main__":
                 "point1": point,
                 "point2": point,
                 "point3": point,
+                "name": "suf 1"
             },
             {
                 "surface_type": "rough",
                 "point1": point,
                 "point2": point,
                 "point3": point,
-                "color": [0.1, 0.5, 1.0]
+                "color": [0.1, 0.5, 1.0],
+                "name": "suf 2"
             },
             {
                 "surface_type": "light",
                 "point1": point,
                 "point2": point,
                 "point3": point,
-                "light": [0.9, 0.5, 0.0]
+                "light": [0.9, 0.5, 0.0],
+                "name": "suf 3"
             }
         ]
     }

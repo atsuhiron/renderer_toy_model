@@ -91,10 +91,14 @@ class Particle:
 
 
 class Surface(metaclass=abc.ABCMeta):
-    def __init__(self, point1: np.ndarray, point2: np.ndarray, point3: np.ndarray):
+    def __init__(self, point1: np.ndarray, point2: np.ndarray, point3: np.ndarray, name: str = None):
         self._points = np.array([point1, point2, point3], dtype=np.float32)
         self._uuid = uuid.uuid1()
         self._surface_type = self.get_surface_type()
+        if name is None:
+            self._name = ""
+        else:
+            self._name = name
 
     def get_basis(self) -> np.ndarray:
         return np.array([self._points[1] - self._points[0], self._points[2] - self._points[0]])
@@ -144,14 +148,15 @@ class SmoothSurface(Surface):
         p1 = np.array(surface_dict["point1"])
         p2 = np.array(surface_dict["point2"])
         p3 = np.array(surface_dict["point3"])
-        return SmoothSurface(p1, p2, p3)
+        name = surface_dict.get("name")
+        return SmoothSurface(p1, p2, p3, name)
 
 
 class RoughSurface(Surface):
     SAMPLE_COEF = np.array([np.pi * 0.5, 1], dtype=np.float32)
 
-    def __init__(self, point1: np.ndarray, point2: np.ndarray, point3: np.ndarray, color: chromatic.CColor):
-        super().__init__(point1, point2, point3)
+    def __init__(self, point1: np.ndarray, point2: np.ndarray, point3: np.ndarray, color: chromatic.CColor, name: str = None):
+        super().__init__(point1, point2, point3, name)
         self._color = color
 
     @staticmethod
@@ -203,12 +208,14 @@ class RoughSurface(Surface):
         p2 = np.array(surface_dict["point2"])
         p3 = np.array(surface_dict["point3"])
         color = chromatic.CColor(np.array(surface_dict["color"]))
-        return RoughSurface(p1, p2, p3, color)
+        name = surface_dict.get("name")
+        return RoughSurface(p1, p2, p3, color, name)
 
 
 class LightSurface(Surface):
-    def __init__(self, point1: np.ndarray, point2: np.ndarray, point3: np.ndarray, light: chromatic.CLight):
-        super().__init__(point1, point2, point3)
+    def __init__(self, point1: np.ndarray, point2: np.ndarray, point3: np.ndarray,
+                 light: chromatic.CLight, name: str = None):
+        super().__init__(point1, point2, point3, name)
         self._light = light
 
     def get_collision_particle(self, in_part: Particle, num: int, c_param: np.ndarray) -> list[Particle]:
@@ -224,7 +231,8 @@ class LightSurface(Surface):
         p2 = np.array(surface_dict["point2"])
         p3 = np.array(surface_dict["point3"])
         light = chromatic.CLight(np.array(surface_dict["light"]))
-        return LightSurface(p1, p2, p3, light)
+        name = surface_dict.get("name")
+        return LightSurface(p1, p2, p3, light, name)
 
 
 def calc_collision_param(suf: Surface, part: Particle) -> np.ndarray:
