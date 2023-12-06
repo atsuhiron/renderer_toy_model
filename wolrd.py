@@ -1,12 +1,13 @@
 from __future__ import annotations
 from typing import Any
 
+import base_geom
 import geom
 from camera import Camera
 
 
 class World:
-    def __init__(self, surfaces: list[geom.Surface], camera: Camera):
+    def __init__(self, surfaces: list[base_geom.BaseSurface], camera: Camera):
         self.surfaces = surfaces
         self.camera = camera
 

@@ -25,3 +25,4 @@ class Camera:
         pixel_v = camera_dict["pixel_v"]
         pixel_h = camera_dict["pixel_h"]
         return Camera(pos, vec, focal_length, fov_v, fov_h, pixel_v, pixel_h)
+    

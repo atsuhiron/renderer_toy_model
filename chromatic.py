@@ -15,7 +15,6 @@ class Chromatic:
 
     @staticmethod
     def _from_array_or_code(value: np.ndarray | list[float | int] | str) -> np.ndarray:
-        arr = None
         if isinstance(value, np.ndarray):
             # np.array([23, 128, 128])
             arr = value.astype(np.float32)
@@ -66,11 +65,11 @@ if __name__ == "__main__":
     from viewer import plot_color_arr
 
     base_col = CColor(np.array([0.1, 0.1, 0.2]))
-    l1 = CLight(np.array([0.00, 0.05, 0.05]))
+    l1 = CLight(1 - np.array([0.00, 0.05, 0.05]))
     l1_on_base = l1.add_color(base_col)
     plot_color_arr([base_col.get_array(), l1.to_color().get_array(), l1_on_base.to_color().get_array()])
 
-    l2 = CLight(np.array([1, 1, 0]))
-    l3 = CLight(np.array([0, 1, 1]))
+    l2 = CLight(1 - np.array([1, 1, 0]))
+    l3 = CLight(1 - np.array([0, 1, 1]))
     l23 = CLight(add_chromatic_multi([l2.get_array(), l3.get_array()]))
     plot_color_arr([light.to_color().get_array() for light in [l2, l3, l23]])

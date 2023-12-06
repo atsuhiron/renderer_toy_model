@@ -1,20 +1,17 @@
 from __future__ import annotations
 from typing import Iterable
 from typing import Any
-import abc
 import uuid
 
 import matplotlib.pyplot as plt
 import numpy as np
 
 import chromatic
+import base_geom
+import algorithm
 
 
-def normalize(vec: np.ndarray) -> np.ndarray:
-    return vec / np.linalg.norm(vec)
-
-
-class Particle:
+class Particle(base_geom.BaseParticle):
     def __init__(self, pos: np.ndarray, vec: np.ndarray,
                  parent_ids: list[str] = None, intensity: float = 1.0, light: chromatic.CLight = None,
                  is_terminated: bool = False):
@@ -90,53 +87,10 @@ class Particle:
                         chromatic.CLight(light_element))
 
 
-class Surface(metaclass=abc.ABCMeta):
-    def __init__(self, point1: np.ndarray, point2: np.ndarray, point3: np.ndarray, name: str = None):
-        self._points = np.array([point1, point2, point3], dtype=np.float32)
-        self._uuid = uuid.uuid1()
-        self._surface_type = self.get_surface_type()
-        if name is None:
-            self._name = ""
-        else:
-            self._name = name
-
-    def get_basis(self) -> np.ndarray:
-        return np.array([self._points[1] - self._points[0], self._points[2] - self._points[0]])
-
-    def get_basis_norm(self) -> np.ndarray:
-        return np.linalg.norm(self.get_basis(), axis=1)
-
-    def get_origin(self) -> np.ndarray:
-        return self._points[0]
-
-    def get_norm_vec(self) -> np.ndarray:
-        e1, e2 = self.get_basis()
-        return np.cross(e1, e2)
-
-    def get_id(self) -> str:
-        return str(self._uuid)
-
-    def get_points(self) -> np.ndarray:
-        return self._points
-
-    def calc_relative_c_point(self, c_param: np.ndarray) -> np.ndarray:
-        e1, e2, c = c_param
-        return np.sum(self.get_basis() * np.array([[e1], [e2]]), axis=0)
-
-    @staticmethod
-    @abc.abstractmethod
-    def get_surface_type() -> str:
-        pass
-
-    @abc.abstractmethod
-    def get_collision_particle(self, in_part: Particle, num: int, c_param: np.ndarray) -> list[Particle]:
-        pass
-
-
-class SmoothSurface(Surface):
+class SmoothSurface(base_geom.BaseSurface):
     def get_collision_particle(self, in_part: Particle, num: int, c_param: np.ndarray) -> list[Particle]:
         c_point = self.calc_relative_c_point(c_param) + self.get_origin()
-        out_vec = calc_main_out_vec(self, in_part)
+        out_vec = algorithm.calc_main_out_vec(self, in_part)
         return [Particle(c_point, out_vec, in_part.get_parent_ids(), in_part.get_intensity())]
 
     @staticmethod
@@ -152,10 +106,11 @@ class SmoothSurface(Surface):
         return SmoothSurface(p1, p2, p3, name)
 
 
-class RoughSurface(Surface):
+class RoughSurface(base_geom.BaseSurface):
     SAMPLE_COEF = np.array([np.pi * 0.5, 1], dtype=np.float32)
 
-    def __init__(self, point1: np.ndarray, point2: np.ndarray, point3: np.ndarray, color: chromatic.CColor, name: str = None):
+    def __init__(self, point1: np.ndarray, point2: np.ndarray, point3: np.ndarray,
+                 color: chromatic.CColor, name: str = None):
         super().__init__(point1, point2, point3, name)
         self._color = color
 
@@ -181,17 +136,17 @@ class RoughSurface(Surface):
         # zenith, from cosine distribution
         theta = self._sample_from_cos_distribution(num)
 
-        normalized_norm = normalize(self.get_norm_vec())
+        normalized_norm = algorithm.normalize(self.get_norm_vec())
         if np.dot(normalized_norm, in_part.get_vec()) > 0:
             normalized_norm *= -1
 
-        c_point_to_origin_vec = -normalize(rel_c_point)
+        c_point_to_origin_vec = -algorithm.normalize(rel_c_point)
 
         out_particles = []
         child_intensity = in_part.get_intensity() / num
         for ii in range(num):
-            zenith_rotation_axial_vec = rotate_vector(c_point_to_origin_vec, normalized_norm, float(phi[ii]))
-            out_vec = rotate_vector(normalized_norm, zenith_rotation_axial_vec, float(theta[ii]))
+            zenith_rotation_axial_vec = algorithm.rotate_vector(c_point_to_origin_vec, normalized_norm, float(phi[ii]))
+            out_vec = algorithm.rotate_vector(normalized_norm, zenith_rotation_axial_vec, float(theta[ii]))
             out_particles.append(
                 Particle(c_point, out_vec, in_part.get_parent_ids(), child_intensity)
             )
@@ -212,7 +167,7 @@ class RoughSurface(Surface):
         return RoughSurface(p1, p2, p3, color, name)
 
 
-class LightSurface(Surface):
+class LightSurface(base_geom.BaseSurface):
     def __init__(self, point1: np.ndarray, point2: np.ndarray, point3: np.ndarray,
                  light: chromatic.CLight, name: str = None):
         super().__init__(point1, point2, point3, name)
@@ -235,56 +190,6 @@ class LightSurface(Surface):
         return LightSurface(p1, p2, p3, light, name)
 
 
-def calc_collision_param(suf: Surface, part: Particle) -> np.ndarray:
-    a = np.transpose(np.r_[suf.get_basis(), -part.get_vec()[np.newaxis, :]])
-    b = part.get_pos() - suf.get_origin()
-    return np.linalg.solve(a, b)
-
-
-def do_collision(c_param: np.ndarray, basis_norm: np.ndarray) -> bool:
-    e1, e2, c = c_param
-    e1 /= basis_norm[0]
-    e2 /= basis_norm[1]
-
-    if e1 < 0 or e2 < 0:
-        return False
-
-    if (e1 + e2) > 0.5:
-        return False
-
-    return True
-
-
-# def calc_collision_angle(suf: Surface, part: Particle) -> float:
-#     norm = suf.get_norm_vec()
-#     vec = part.get_vec()
-#     cos_theta = np.dot(norm, vec) / np.linalg.norm(norm) / np.linalg.norm(vec)
-#     return np.arccos(np.abs(cos_theta))
-
-
-def rotate_vector(vec: np.ndarray, normalized_axial: np.ndarray, radian: float) -> np.ndarray:
-    # Reference: http://www.info.hiroshima-cu.ac.jp/~miyazaki/knowledge/tech0007.html
-    r = np.array([
-        [0, -normalized_axial[2], normalized_axial[1]],
-        [normalized_axial[2], 0, -normalized_axial[0]],
-        [-normalized_axial[1], normalized_axial[0], 0]
-    ])
-    m = np.eye(3) + np.sin(radian) * r + (1 - np.cos(radian)) * np.dot(r, r)
-    qm = np.eye(4)
-    qm[0:3, 0:3] = m
-
-    qv = np.ones(4)
-    qv[0:3] = vec
-    return np.dot(qm, qv)[0:3]
-
-
-def calc_main_out_vec(suf: Surface, part: Particle) -> np.ndarray:
-    norm = normalize(suf.get_norm_vec())
-
-    in_vec = -part.get_vec()  # inverse direction
-    return rotate_vector(in_vec, norm, np.pi)
-
-
 if __name__ == "__main__":
     import importlib
     import viewer
@@ -304,9 +209,9 @@ if __name__ == "__main__":
     child_particles = []
     cp_arr = []
     for particle in particles:
-        collision_param = calc_collision_param(surface, particle)
+        collision_param = algorithm.calc_collision_param(surface, particle)
         cp_arr.append(collision_param)
-        if do_collision(collision_param, surface.get_basis_norm()):
+        if algorithm.do_collision(collision_param, surface.get_basis_norm()):
             child_particles += surface.get_collision_particle(particle, 4, collision_param)
     cp_arr = np.array(cp_arr)
     colors = ["red"] * len(particles) + ["green"] * len(child_particles)
