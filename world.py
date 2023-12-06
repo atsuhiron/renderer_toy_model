@@ -13,7 +13,7 @@ class World:
 
     @staticmethod
     def from_dict(world_dict: dict[str, Any]) -> World:
-        _camera = world_dict["camera"]
+        _camera = Camera.from_dict(world_dict["camera"])
         surfaces = []
         for suf_dict in world_dict["surfaces"]:
             suf_type = suf_dict["surface_type"]
@@ -27,11 +27,3 @@ class World:
                 assert False, f"Unknown surface type {suf_type}"
 
         return World(surfaces, _camera)
-
-
-if __name__ == "__main__":
-    import json
-
-    with open("samples/simple_world.json", "r") as f:
-        wd = json.load(f)
-    world = World.from_dict(wd)

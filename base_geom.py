@@ -44,6 +44,9 @@ class BaseSurface(metaclass=abc.ABCMeta):
         else:
             self._name = name
 
+    def get_name(self) -> str:
+        return self._name
+
     def get_basis(self) -> np.ndarray:
         return np.array([self._points[1] - self._points[0], self._points[2] - self._points[0]])
 

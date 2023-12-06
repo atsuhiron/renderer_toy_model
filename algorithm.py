@@ -9,6 +9,10 @@ def normalize(vec: np.ndarray) -> np.ndarray:
 
 def calc_collision_param(suf: base_geom.BaseSurface, part: base_geom.BaseParticle) -> np.ndarray:
     a = np.transpose(np.r_[suf.get_basis(), -part.get_vec()[np.newaxis, :]])
+    if np.linalg.matrix_rank(a) < 3:
+        # particle and surface is parallel (never collide)
+        return -np.ones(3, dtype=np.float32)
+
     b = part.get_pos() - suf.get_origin()
     return np.linalg.solve(a, b)
 
@@ -48,3 +52,16 @@ def calc_main_out_vec(suf: base_geom.BaseSurface, part: base_geom.BaseParticle) 
 
     in_vec = -part.get_vec()  # inverse direction
     return rotate_vector(in_vec, norm, np.pi)
+
+
+def find_collision_surface(part: base_geom.BaseParticle, surfaces: list[base_geom.BaseSurface]) -> tuple[float, base_geom.BaseSurface | None]:
+    # TODO: need pre filtering (ex. Exclude surface in completely different direction)
+    collisions = []
+    for suf in surfaces:
+        c_param = calc_collision_param(suf, part)
+        if do_collision(c_param, suf.get_basis_norm()):
+            collisions.append((float(c_param[2]), suf))
+
+    if len(collisions) == 0:
+        return -1, None
+    return min(collisions, key=lambda col: col[0])
