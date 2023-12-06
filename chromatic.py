@@ -26,9 +26,9 @@ class Chromatic:
             # #FF80A5
             assert value[0] == "#"
             assert len(value) == 7
-            arr = np.array([int(value[1:2], base=16),
-                            int(value[3:2], base=16),
-                            int(value[5:2], base=16)], dtype=np.float32)
+            arr = np.array([int(value[1:3], base=16),
+                            int(value[3:5], base=16),
+                            int(value[5:7], base=16)], dtype=np.float32)
         else:
             raise TypeError("Not supported type")
 
