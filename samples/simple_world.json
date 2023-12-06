@@ -1,0 +1,93 @@
+{
+  "camera": {
+    "pos": [0, -1, 0],
+    "vec": [0, 1, 0],
+    "focal_length": 1,
+    "fov_v": 1.57079632679,
+    "fov_h": 1.57079632679,
+    "pixel_v": 100,
+    "pixel_h": 100
+  },
+  "surfaces": [
+    {
+      "surface_type": "rough",
+      "point1": [-1, 1, 1],
+      "point2": [-1, 3, 1],
+      "point3": [-1, 1, -1],
+      "color": "#191970",
+      "name": "left upper"
+    },
+    {
+      "surface_type": "rough",
+      "point1": [-1, 3, -1],
+      "point2": [-1, 1, -1],
+      "point3": [-1, 3, 1],
+      "color": "#191970",
+      "name": "left lower"
+    },
+    {
+      "surface_type": "rough",
+      "point1": [1, 1, 1],
+      "point2": [1, 3, 1],
+      "point3": [1, 1, -1],
+      "color": "#dc143c",
+      "name": "right upper"
+    },
+    {
+      "surface_type": "rough",
+      "point1": [1, 3, -1],
+      "point2": [1, 1, -1],
+      "point3": [1, 3, 1],
+      "color": "#dc143c",
+      "name": "right lower"
+    },
+    {
+      "surface_type": "rough",
+      "point1": [-1, 3, 1],
+      "point2": [1, 3, 1],
+      "point3": [-1, 3, -1],
+      "color": "#ffffff",
+      "name": "back upper"
+    },
+    {
+      "surface_type": "rough",
+      "point1": [1, 3, -1],
+      "point2": [-1, 3, -1],
+      "point3": [1, 3, 1],
+      "color": "#ffffff",
+      "name": "back lower"
+    },
+    {
+      "surface_type": "light",
+      "point1": [1, 1, 1],
+      "point2": [-1, 1, 1],
+      "point3": [1, 3, 1],
+      "light": "#fffaf0",
+      "name": "light front"
+    },
+    {
+      "surface_type": "light",
+      "point1": [-1, 3, 1],
+      "point2": [1, 3, 1],
+      "point3": [-1, 1, 1],
+      "light": "#fffaf0",
+      "name": "light behind"
+    },
+    {
+      "surface_type": "rough",
+      "point1": [1, 1, -1],
+      "point2": [-1, 1, -1],
+      "point3": [1, 3, -1],
+      "color": "#dcdcdc",
+      "name": "floor front"
+    },
+    {
+      "surface_type": "rough",
+      "point1": [-1, 3, -1],
+      "point2": [1, 3, -1],
+      "point3": [-1, 1, -1],
+      "color": "#dcdcdc",
+      "name": "floor behind"
+    }
+  ]
+}

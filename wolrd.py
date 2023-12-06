@@ -29,42 +29,8 @@ class World:
 
 
 if __name__ == "__main__":
-    point = [0.2, 0.4, 0.7]
-    wd = {
-        "camera": {
-            "pos": point,
-            "vec": point,
-            "focal_length": 1.2,
-            "fov_v": 1.57,
-            "fov_h": 1.57,
-            "pixel_v": 100,
-            "pixel_h": 100,
-        },
-        "surfaces": [
-            {
-                "surface_type": "smooth",
-                "point1": point,
-                "point2": point,
-                "point3": point,
-                "name": "suf 1"
-            },
-            {
-                "surface_type": "rough",
-                "point1": point,
-                "point2": point,
-                "point3": point,
-                "color": [0.1, 0.5, 1.0],
-                "name": "suf 2"
-            },
-            {
-                "surface_type": "light",
-                "point1": point,
-                "point2": point,
-                "point3": point,
-                "light": [0.9, 0.5, 0.0],
-                "name": "suf 3"
-            }
-        ]
-    }
+    import json
 
+    with open("samples/simple_world.json", "r") as f:
+        wd = json.load(f)
     world = World.from_dict(wd)

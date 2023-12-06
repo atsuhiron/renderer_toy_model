@@ -5,13 +5,13 @@ import numpy as np
 
 class Chromatic:
     def __init__(self, elements: np.ndarray | list[float | int] | str):
-        self._elements = self._from_array_or_code(elements)
+        self.elements = self._from_array_or_code(elements)
 
     def get_array(self) -> np.ndarray:
-        return self._elements
+        return self.elements
 
     def as_uint8(self) -> np.ndarray:
-        return (self._elements * 255).astype(np.uint8)
+        return (self.elements * 255).astype(np.uint8)
 
     @staticmethod
     def _from_array_or_code(value: np.ndarray | list[float | int] | str) -> np.ndarray:
@@ -43,6 +43,10 @@ class CColor(Chromatic):
 
 
 class CLight(Chromatic):
+    def __init__(self, elements: np.ndarray | list[float | int] | str):
+        super().__init__(elements)
+        self.elements = 1 - self.elements
+
     def to_color(self) -> CColor:
         return CColor(1 - self.get_array())
 
