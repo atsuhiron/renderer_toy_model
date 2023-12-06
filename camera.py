@@ -17,9 +17,9 @@ class Camera:
 
     @staticmethod
     def from_dict(camera_dict: dict[str, Any]) -> Camera:
-        pos = camera_dict["pos"]
-        vec = camera_dict["vec"]
-        focal_length = camera_dict["focal_length"]
+        pos = np.array(camera_dict["pos"], dtype=np.float32)
+        vec = np.array(camera_dict["vec"], dtype=np.float32)
+        focal_length = float(camera_dict["focal_length"])
         fov_v = camera_dict["fov_v"]
         fov_h = camera_dict["fov_h"]
         pixel_v = camera_dict["pixel_v"]

@@ -4,14 +4,37 @@ import numpy as np
 
 
 class Chromatic:
-    def __init__(self, elements: np.ndarray):
-        self._elements = elements
+    def __init__(self, elements: np.ndarray | list[float | int] | str):
+        self._elements = self._from_array_or_code(elements)
 
     def get_array(self) -> np.ndarray:
         return self._elements
 
     def as_uint8(self) -> np.ndarray:
         return (self._elements * 255).astype(np.uint8)
+
+    @staticmethod
+    def _from_array_or_code(value: np.ndarray | list[float | int] | str) -> np.ndarray:
+        arr = None
+        if isinstance(value, np.ndarray):
+            # np.array([23, 128, 128])
+            arr = value.astype(np.float32)
+        elif isinstance(value, list):
+            # [0.23, 0.85, 0.0]
+            arr = np.array(value, dtype=np.float32)
+        elif isinstance(value, str):
+            # #FF80A5
+            assert value[0] == "#"
+            assert len(value) == 7
+            arr = np.array([int(value[1:2], base=16),
+                            int(value[3:2], base=16),
+                            int(value[5:2], base=16)], dtype=np.float32)
+        else:
+            raise TypeError("Not supported type")
+
+        if np.max(arr) > 1:
+            arr /= 255
+        return arr
 
 
 class CColor(Chromatic):

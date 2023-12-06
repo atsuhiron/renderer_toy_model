@@ -32,7 +32,7 @@ class Particle:
             self._generation = 1 + len(parent_ids)
 
         if light is None:
-            self._light = chromatic.CLight(np.ones(3, dtype=np.float32))
+            self._light = chromatic.CLight(np.ones(3))
         else:
             self._light = light
 
@@ -145,9 +145,9 @@ class SmoothSurface(Surface):
 
     @staticmethod
     def from_dict(surface_dict: dict[str, Any]) -> SmoothSurface:
-        p1 = np.array(surface_dict["point1"])
-        p2 = np.array(surface_dict["point2"])
-        p3 = np.array(surface_dict["point3"])
+        p1 = np.array(surface_dict["point1"], dtype=np.float32)
+        p2 = np.array(surface_dict["point2"], dtype=np.float32)
+        p3 = np.array(surface_dict["point3"], dtype=np.float32)
         name = surface_dict.get("name")
         return SmoothSurface(p1, p2, p3, name)
 
@@ -204,10 +204,10 @@ class RoughSurface(Surface):
 
     @staticmethod
     def from_dict(surface_dict: dict[str, Any]) -> RoughSurface:
-        p1 = np.array(surface_dict["point1"])
-        p2 = np.array(surface_dict["point2"])
-        p3 = np.array(surface_dict["point3"])
-        color = chromatic.CColor(np.array(surface_dict["color"]))
+        p1 = np.array(surface_dict["point1"], dtype=np.float32)
+        p2 = np.array(surface_dict["point2"], dtype=np.float32)
+        p3 = np.array(surface_dict["point3"], dtype=np.float32)
+        color = chromatic.CColor(surface_dict["color"])
         name = surface_dict.get("name")
         return RoughSurface(p1, p2, p3, color, name)
 
@@ -227,10 +227,10 @@ class LightSurface(Surface):
 
     @staticmethod
     def from_dict(surface_dict: dict[str, Any]) -> LightSurface:
-        p1 = np.array(surface_dict["point1"])
-        p2 = np.array(surface_dict["point2"])
-        p3 = np.array(surface_dict["point3"])
-        light = chromatic.CLight(np.array(surface_dict["light"]))
+        p1 = np.array(surface_dict["point1"], dtype=np.float32)
+        p2 = np.array(surface_dict["point2"], dtype=np.float32)
+        p3 = np.array(surface_dict["point3"], dtype=np.float32)
+        light = chromatic.CLight(surface_dict["light"])
         name = surface_dict.get("name")
         return LightSurface(p1, p2, p3, light, name)
 
