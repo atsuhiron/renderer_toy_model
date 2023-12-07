@@ -33,6 +33,10 @@ class BaseParticle(metaclass=abc.ABCMeta):
     def get_color(self) -> np.ndarray:
         pass
 
+    @abc.abstractmethod
+    def get_last_collided_surface_id(self) -> str:
+        pass
+
 
 class BaseSurface(metaclass=abc.ABCMeta):
     def __init__(self, point1: np.ndarray, point2: np.ndarray, point3: np.ndarray, name: str = None):

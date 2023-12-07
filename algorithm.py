@@ -54,14 +54,17 @@ def calc_main_out_vec(suf: base_geom.BaseSurface, part: base_geom.BaseParticle) 
     return rotate_vector(in_vec, norm, np.pi)
 
 
-def find_collision_surface(part: base_geom.BaseParticle, surfaces: list[base_geom.BaseSurface]) -> tuple[float, base_geom.BaseSurface | None]:
+def find_collision_surface(part: base_geom.BaseParticle, surfaces: list[base_geom.BaseSurface]) -> tuple[np.ndarray, base_geom.BaseSurface | None]:
     # TODO: need pre filtering (ex. Exclude surface in completely different direction)
     collisions = []
     for suf in surfaces:
+        if part.get_last_collided_surface_id() == suf.get_id():
+            continue
+
         c_param = calc_collision_param(suf, part)
         if do_collision(c_param, suf.get_basis_norm()):
-            collisions.append((float(c_param[2]), suf))
+            collisions.append((c_param, suf))
 
     if len(collisions) == 0:
-        return -1, None
-    return min(collisions, key=lambda col: col[0])
+        return -np.ones(3), None
+    return min(collisions, key=lambda col: col[0][2])

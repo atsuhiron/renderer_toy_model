@@ -14,12 +14,13 @@ import algorithm
 class Particle(base_geom.BaseParticle):
     def __init__(self, pos: np.ndarray, vec: np.ndarray,
                  parent_ids: list[str] = None, intensity: float = 1.0, light: chromatic.CLight = None,
-                 is_terminated: bool = False):
+                 last_collided_surface_id: str = None, is_terminated: bool = False):
         self._uuid = uuid.uuid1()
         self._pos = pos
         self._vec = vec
         self._intensity = intensity
         self._terminated = is_terminated
+        self._last_collided_surface_id = last_collided_surface_id
 
         if parent_ids is None:
             self._parents_ids = []
@@ -63,6 +64,9 @@ class Particle(base_geom.BaseParticle):
     def get_color(self) -> np.ndarray:
         return self._light.to_color().get_array()
 
+    def get_last_collided_surface_id(self) -> str:
+        return self._last_collided_surface_id
+
     @staticmethod
     def _fmt(val: int | float) -> str:
         if type(val) is int:
@@ -81,17 +85,19 @@ class Particle(base_geom.BaseParticle):
     @staticmethod
     def create_terminated_particle(source: Particle, light_element: np.ndarray) -> Particle:
         return Particle(source.get_pos(),
-                        source.get_vec(),
+                        algorithm.normalize(source.get_vec()),
                         source.get_parent_ids(contain_self=False),
                         source.get_intensity(),
-                        chromatic.CLight(light_element))
+                        chromatic.CLight(light_element),
+                        None,  # None で大丈夫なはず
+                        True)
 
 
 class SmoothSurface(base_geom.BaseSurface):
     def get_collision_particle(self, in_part: Particle, num: int, c_param: np.ndarray) -> list[Particle]:
         c_point = self.calc_relative_c_point(c_param) + self.get_origin()
-        out_vec = algorithm.calc_main_out_vec(self, in_part)
-        return [Particle(c_point, out_vec, in_part.get_parent_ids(), in_part.get_intensity())]
+        out_vec = algorithm.normalize(algorithm.calc_main_out_vec(self, in_part))
+        return [Particle(c_point, out_vec, in_part.get_parent_ids(), in_part.get_intensity(), last_collided_surface_id=self.get_id())]
 
     @staticmethod
     def get_surface_type() -> str:
@@ -146,9 +152,9 @@ class RoughSurface(base_geom.BaseSurface):
         child_intensity = in_part.get_intensity() / num
         for ii in range(num):
             zenith_rotation_axial_vec = algorithm.rotate_vector(c_point_to_origin_vec, normalized_norm, float(phi[ii]))
-            out_vec = algorithm.rotate_vector(normalized_norm, zenith_rotation_axial_vec, float(theta[ii]))
+            out_vec = algorithm.normalize(algorithm.rotate_vector(normalized_norm, zenith_rotation_axial_vec, float(theta[ii])))
             out_particles.append(
-                Particle(c_point, out_vec, in_part.get_parent_ids(), child_intensity)
+                Particle(c_point, out_vec, in_part.get_parent_ids(), child_intensity, last_collided_surface_id=self.get_id())
             )
 
         return out_particles
