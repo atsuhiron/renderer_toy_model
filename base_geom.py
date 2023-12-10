@@ -1,7 +1,10 @@
+from __future__ import annotations
 import abc
 import uuid
 
 import numpy as np
+
+import chromatic
 
 
 class BaseParticle(metaclass=abc.ABCMeta):
@@ -30,11 +33,20 @@ class BaseParticle(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def get_color(self) -> np.ndarray:
+    def get_light(self) -> chromatic.CLight:
         pass
 
     @abc.abstractmethod
     def get_last_collided_surface_id(self) -> str:
+        pass
+
+    @abc.abstractmethod
+    def get_uuid(self) -> uuid.UUID:
+        pass
+
+    @staticmethod
+    @abc.abstractmethod
+    def create_inverse_traced_particle(source: BaseParticle, light: chromatic.CLight, itst: float) -> BaseParticle:
         pass
 
 

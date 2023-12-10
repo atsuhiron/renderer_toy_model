@@ -14,8 +14,11 @@ import algorithm
 class Particle(base_geom.BaseParticle):
     def __init__(self, pos: np.ndarray, vec: np.ndarray,
                  parent_ids: list[str] = None, intensity: float = 1.0, light: chromatic.CLight = None,
-                 last_collided_surface_id: str = None, is_terminated: bool = False):
-        self._uuid = uuid.uuid1()
+                 last_collided_surface_id: str = None, is_terminated: bool = False, _uuid: uuid.UUID = None):
+        if _uuid is None:
+            self._uuid = uuid.uuid1()
+        else:
+            self._uuid = _uuid
         self._pos = pos
         self._vec = vec
         self._intensity = intensity
@@ -61,11 +64,17 @@ class Particle(base_geom.BaseParticle):
     def is_terminated(self) -> bool:
         return self._terminated
 
-    def get_color(self) -> np.ndarray:
-        return self._light.to_color().get_array()
+    def get_light(self) -> chromatic.CLight:
+        return self._light
+
+    def set_light(self, light: chromatic.CLight):
+        self._light = light
 
     def get_last_collided_surface_id(self) -> str:
         return self._last_collided_surface_id
+
+    def get_uuid(self) -> uuid.UUID:
+        return self._uuid
 
     @staticmethod
     def _fmt(val: int | float) -> str:
@@ -86,11 +95,22 @@ class Particle(base_geom.BaseParticle):
     def create_terminated_particle(source: Particle, light_element: np.ndarray) -> Particle:
         return Particle(source.get_pos(),
                         algorithm.normalize(source.get_vec()),
-                        source.get_parent_ids(contain_self=False),
+                        source.get_parent_ids(),
                         source.get_intensity(),
                         chromatic.CLight(light_element),
                         None,  # None で大丈夫なはず
                         True)
+
+    @staticmethod
+    def create_inverse_traced_particle(source: base_geom.BaseParticle, light: chromatic.CLight, itst: float) -> base_geom.BaseParticle:
+        return Particle(source.get_pos(),
+                        source.get_vec(),
+                        source.get_parent_ids(contain_self=False),
+                        itst,
+                        light,
+                        None,  # None で大丈夫なはず
+                        False,
+                        source.get_uuid())
 
 
 class SmoothSurface(base_geom.BaseSurface):
