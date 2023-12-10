@@ -4,6 +4,7 @@ import numpy as np
 import tqdm
 
 import base_geom as bg
+import camera
 import chromatic
 import geom
 import world as wrd
@@ -74,13 +75,10 @@ if __name__ == "__main__":
 
     with open("samples/simple_world.json", "r") as f:
         wd = json.load(f)
-    r_config = rendering_config.RenderingConfig(3, 4)
-
+    r_config = rendering_config.RenderingConfig(3, 6)
+    cam = camera.Camera.from_dict(wd["camera"])
     sw = wrd.World.from_dict(wd)
-    part_0g = [geom.Particle(
-        pos=sw.camera.pos,
-        vec=algorithm.normalize(np.array([-1.0, 3.0, 0.0], dtype=np.float32))
-    )]
+    part_0g = cam.create_pixel_particles()
 
     child_1g = trace_particles(part_0g, sw.surfaces, r_config)
     child_2g = trace_particles(child_1g, sw.surfaces, r_config)
@@ -89,6 +87,8 @@ if __name__ == "__main__":
     inverse_2g = inverse_trace(child_3g, child_2g)
     inverse_1g = inverse_trace(inverse_2g, child_1g)
     inverse_0g = inverse_trace(inverse_1g, part_0g)
+
+    viewer.show(inverse_0g, cam)
 
     # plot
     # colors = ["red"] * 1 + ["green"] * len(child_1g) + ["blue"] * len(child_2g)
