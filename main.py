@@ -1,10 +1,10 @@
+import argparse
 import json
 
 import numpy as np
 import tqdm
 
 import base_geom as bg
-import camera
 import chromatic
 import geom
 import world as wrd
@@ -13,8 +13,18 @@ import rendering_config
 import viewer
 
 
-def render(world: wrd.World, config: rendering_config.RenderingConfig):
-    pass
+def render(world: wrd.World, config: rendering_config.RenderingConfig) -> list[bg.BaseParticle]:
+    cam = world.camera
+
+    generations = [cam.create_pixel_particles()]
+    for g in range(1, config.max_generation + 1):
+        children = trace_particles(generations[g - 1], world.surfaces, config)
+        generations.append(children)
+
+    inverse_traced_child = generations[-1]
+    for g in range(1, config.max_generation + 1)[::-1]:
+        inverse_traced_child = inverse_trace(inverse_traced_child, generations[g - 1])
+    return inverse_traced_child
 
 
 def trace_particle(part: bg.BaseParticle,
@@ -69,29 +79,16 @@ def inverse_trace(children: list[bg.BaseParticle], parents: list[bg.BaseParticle
 
 
 if __name__ == "__main__":
-    import importlib
-    importlib.reload(algorithm)
-    np.random.seed(8)
+    parser = argparse.ArgumentParser(description='Rendering CG')
+    parser.add_argument("world_json_path", help="The json file path describing 3d model.")
+    parser.add_argument("-g", "--max-gen", type=int, default=3, help="Max child particle generation.")
+    parser.add_argument("-c", "--child-num", type=int, default=6, help="The number of child created by a parent particle.")
+    args = parser.parse_args()
 
-    with open("samples/simple_world.json", "r") as f:
+    with open(args.world_json_path, "r") as f:
         wd = json.load(f)
-    r_config = rendering_config.RenderingConfig(3, 6)
-    cam = camera.Camera.from_dict(wd["camera"])
+    r_config = rendering_config.RenderingConfig(args.max_gen, args.child_num)
     sw = wrd.World.from_dict(wd)
-    part_0g = cam.create_pixel_particles()
+    inverse_traced = render(sw, r_config)
 
-    child_1g = trace_particles(part_0g, sw.surfaces, r_config)
-    child_2g = trace_particles(child_1g, sw.surfaces, r_config)
-    child_3g = trace_particles(child_2g, sw.surfaces, r_config)
-
-    inverse_2g = inverse_trace(child_3g, child_2g)
-    inverse_1g = inverse_trace(inverse_2g, child_1g)
-    inverse_0g = inverse_trace(inverse_1g, part_0g)
-
-    viewer.show(inverse_0g, cam)
-
-    # plot
-    # colors = ["red"] * 1 + ["green"] * len(child_1g) + ["blue"] * len(child_2g)
-    # vectors = np.array([p.get_vec() for p in [init_part] + child_1g + child_2g])
-    # locations = np.array([p.get_pos() for p in [init_part] + child_1g + child_2g])
-    # viewer.vector(vectors, locations, colors, [suf.get_points() for suf in sw.surfaces])
+    viewer.show(inverse_traced, sw.camera)
