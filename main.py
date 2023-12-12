@@ -43,7 +43,7 @@ def trace_particle(part: bg.BaseParticle,
 
     if col_suf is None:
         return []
-    return col_suf.get_collision_particle(part, r_config.rough_surface_child_num, c_param)
+    return col_suf.get_collision_particle(part, config.rough_surface_child_num, c_param)
 
 
 def trace_particles(particles: list[bg.BaseParticle],
