@@ -1,5 +1,6 @@
 import argparse
 import json
+import time
 
 import numpy as np
 import tqdm
@@ -16,6 +17,7 @@ import viewer
 def render(world: wrd.World, config: rendering_config.RenderingConfig) -> list[bg.BaseParticle]:
     cam = world.camera
 
+    start = time.time()
     generations = [cam.create_pixel_particles()]
     for g in range(1, config.max_generation + 1):
         children = trace_particles(generations[g - 1], world.surfaces, config)
@@ -24,6 +26,8 @@ def render(world: wrd.World, config: rendering_config.RenderingConfig) -> list[b
     inverse_traced_child = generations[-1]
     for g in range(1, config.max_generation + 1)[::-1]:
         inverse_traced_child = inverse_trace(inverse_traced_child, generations[g - 1])
+    end = time.time()
+    print(f"Rendering time: {end - start:.4f} s")
     return inverse_traced_child
 
 

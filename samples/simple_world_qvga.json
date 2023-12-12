@@ -4,9 +4,9 @@
     "vec": [0, 1, 0],
     "focal_length": 1,
     "fov_v": 1.57079633,
-    "fov_h": 1.57079633,
-    "pixel_v": 40,
-    "pixel_h": 40
+    "fov_h": 2.09439510,
+    "pixel_v": 240,
+    "pixel_h": 320
   },
   "surfaces": [
     {
