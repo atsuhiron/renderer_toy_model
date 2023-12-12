@@ -38,7 +38,7 @@ class Camera:
         # move focal point to origin
         pixel_vec = pixel_vec + np.array([[0.0, self.focal, 0.0]], dtype=np.float32)
 
-        forward = np.array([0, 1, 0])
+        forward = np.array([0, 1, 0], dtype=np.float32)
         if not np.all(forward == self.vec):
             angle = np.arccos(np.dot(forward, self.vec) / np.linalg.norm(self.vec))
             axial = algorithm.normalize(np.cross(forward, self.vec))

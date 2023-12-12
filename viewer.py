@@ -4,7 +4,6 @@ import numpy as np
 
 import base_geom
 import camera
-import rendering_config
 
 
 def _plot_vector_3d(axes: plt.Axes, loc, vec, color: str):
