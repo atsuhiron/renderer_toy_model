@@ -1,10 +1,16 @@
 import numpy as np
+import numba
 
 import base_geom
 
 
+NUMBA_OPT = {"nopython": True, "cache": True}
+
+
+@numba.jit("f4[:](f4[:])", **NUMBA_OPT)
 def normalize(vec: np.ndarray) -> np.ndarray:
-    return vec / np.linalg.norm(vec)
+    sq = vec * vec
+    return vec / np.sqrt(sq[0] + sq[1] + sq[2])
 
 
 def calc_collision_param(suf: base_geom.BaseSurface, part: base_geom.BaseParticle) -> np.ndarray:
@@ -17,6 +23,7 @@ def calc_collision_param(suf: base_geom.BaseSurface, part: base_geom.BaseParticl
     return np.linalg.solve(a, b)
 
 
+@numba.jit(**NUMBA_OPT)
 def do_collision(c_param: np.ndarray, basis_norm: np.ndarray) -> bool:
     e1, e2, c = c_param
     e1 /= basis_norm[0]
@@ -31,20 +38,41 @@ def do_collision(c_param: np.ndarray, basis_norm: np.ndarray) -> bool:
     return True
 
 
+@numba.jit(**NUMBA_OPT)
+def dot44_4(mat44: np.ndarray, vec4: np.ndarray) -> np.ndarray:
+    return np.array([
+        np.sum(mat44[0] * vec4),
+        np.sum(mat44[1] * vec4),
+        np.sum(mat44[2] * vec4),
+    ], dtype=np.float32)
+
+
+@numba.jit(**NUMBA_OPT)
+def dot33_33(m1: np.ndarray, m2: np.ndarray) -> np.ndarray:
+    return np.array([
+        [np.sum(m1[0] * m2[:, 0]), np.sum(m1[0] * m2[:, 1]), np.sum(m1[0] * m2[:, 2])],
+        [np.sum(m1[1] * m2[:, 0]), np.sum(m1[1] * m2[:, 1]), np.sum(m1[1] * m2[:, 2])],
+        [np.sum(m1[2] * m2[:, 0]), np.sum(m1[2] * m2[:, 1]), np.sum(m1[2] * m2[:, 2])]
+    ], dtype=np.float32)
+
+
+@numba.jit(**NUMBA_OPT)
 def rotate_vector(vec: np.ndarray, normalized_axial: np.ndarray, radian: float) -> np.ndarray:
     # Reference: http://www.info.hiroshima-cu.ac.jp/~miyazaki/knowledge/tech0007.html
     r = np.array([
         [0, -normalized_axial[2], normalized_axial[1]],
         [normalized_axial[2], 0, -normalized_axial[0]],
         [-normalized_axial[1], normalized_axial[0], 0]
-    ])
-    m = np.eye(3) + np.sin(radian) * r + (1 - np.cos(radian)) * np.dot(r, r)
-    qm = np.eye(4)
-    qm[0:3, 0:3] = m
+    ], dtype=np.float32)
 
-    qv = np.ones(4)
+    sin = np.float32(np.sin(radian))
+    cos = np.float32(np.cos(radian))
+    m = np.eye(3, dtype=np.float32) + sin * r + (1 - cos) * dot33_33(r, r)
+    qm = np.eye(4, dtype=np.float32)
+    qm[0:3, 0:3] = m
+    qv = np.ones(4, dtype=np.float32)
     qv[0:3] = vec
-    return np.dot(qm, qv)[0:3]
+    return dot44_4(qm, qv)
 
 
 def calc_main_out_vec(suf: base_geom.BaseSurface, part: base_geom.BaseParticle) -> np.ndarray:
