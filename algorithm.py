@@ -13,8 +13,17 @@ def normalize(vec: np.ndarray) -> np.ndarray:
     return vec / np.sqrt(sq[0] + sq[1] + sq[2])
 
 
+@numba.jit(**NUMBA_OPT)
+def _gen_a(suf_basis: np.ndarray, part_vec: np.ndarray) -> np.ndarray:
+    return np.array([
+        [suf_basis[0, 0], suf_basis[1, 0], part_vec[0]],
+        [suf_basis[0, 1], suf_basis[1, 1], part_vec[1]],
+        [suf_basis[0, 2], suf_basis[1, 2], part_vec[2]],
+    ], dtype=np.float32)
+
+
 def calc_collision_param(suf: base_geom.BaseSurface, part: base_geom.BaseParticle) -> np.ndarray:
-    a = np.transpose(np.r_[suf.get_basis(), -part.get_vec()[np.newaxis, :]])
+    a = _gen_a(suf.get_basis(), -part.get_vec())
     if np.linalg.matrix_rank(a) < 3:
         # particle and surface is parallel (never collide)
         return -np.ones(3, dtype=np.float32)
@@ -39,7 +48,7 @@ def do_collision(c_param: np.ndarray, basis_norm: np.ndarray) -> bool:
 
 
 @numba.jit(**NUMBA_OPT)
-def dot44_4(mat44: np.ndarray, vec4: np.ndarray) -> np.ndarray:
+def _dot44_4(mat44: np.ndarray, vec4: np.ndarray) -> np.ndarray:
     return np.array([
         np.sum(mat44[0] * vec4),
         np.sum(mat44[1] * vec4),
@@ -48,7 +57,7 @@ def dot44_4(mat44: np.ndarray, vec4: np.ndarray) -> np.ndarray:
 
 
 @numba.jit(**NUMBA_OPT)
-def dot33_33(m1: np.ndarray, m2: np.ndarray) -> np.ndarray:
+def _dot33_33(m1: np.ndarray, m2: np.ndarray) -> np.ndarray:
     return np.array([
         [np.sum(m1[0] * m2[:, 0]), np.sum(m1[0] * m2[:, 1]), np.sum(m1[0] * m2[:, 2])],
         [np.sum(m1[1] * m2[:, 0]), np.sum(m1[1] * m2[:, 1]), np.sum(m1[1] * m2[:, 2])],
@@ -67,12 +76,12 @@ def rotate_vector(vec: np.ndarray, normalized_axial: np.ndarray, radian: float) 
 
     sin = np.float32(np.sin(radian))
     cos = np.float32(np.cos(radian))
-    m = np.eye(3, dtype=np.float32) + sin * r + (1 - cos) * dot33_33(r, r)
+    m = np.eye(3, dtype=np.float32) + sin * r + (1 - cos) * _dot33_33(r, r)
     qm = np.eye(4, dtype=np.float32)
     qm[0:3, 0:3] = m
     qv = np.ones(4, dtype=np.float32)
     qv[0:3] = vec
-    return dot44_4(qm, qv)
+    return _dot44_4(qm, qv)
 
 
 def calc_main_out_vec(suf: base_geom.BaseSurface, part: base_geom.BaseParticle) -> np.ndarray:
