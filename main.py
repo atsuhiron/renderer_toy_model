@@ -1,6 +1,9 @@
+from typing import Generator
 import argparse
 import json
 import time
+import os
+from multiprocessing.pool import Pool
 
 import numpy as np
 import tqdm
@@ -14,18 +17,31 @@ import rendering_config
 import viewer
 
 
-def render(world: wrd.World, config: rendering_config.RenderingConfig) -> list[bg.BaseParticle]:
+def render(world: wrd.World, config: rendering_config.RenderingConfig, para_num: int = None) -> list[bg.BaseParticle]:
     cam = world.camera
 
     start = time.time()
     generations = [cam.create_pixel_particles()]
-    for g in range(1, config.max_generation + 1):
-        children = trace_particles(generations[g - 1], world.surfaces, config)
-        generations.append(children)
+    if para_num is None:
+        # Non parallel
+        for g in range(1, config.max_generation + 1):
+            children = trace_particles(generations[g - 1], world.surfaces, config)
+            generations.append(children)
 
-    inverse_traced_child = generations[-1]
-    for g in range(1, config.max_generation + 1)[::-1]:
-        inverse_traced_child = inverse_trace(inverse_traced_child, generations[g - 1])
+        inverse_traced_child = generations[-1]
+        for g in range(1, config.max_generation + 1)[::-1]:
+            inverse_traced_child = inverse_trace(inverse_traced_child, generations[g - 1])
+    else:
+        # Parallel
+        with Pool(para_num) as pool:
+            for g in range(1, config.max_generation + 1):
+                children = trace_particles_para(generations[g - 1], world.surfaces, config, pool)
+                generations.append(children)
+
+        inverse_traced_child = generations[-1]
+        for g in range(1, config.max_generation + 1)[::-1]:
+            inverse_traced_child = inverse_trace(inverse_traced_child, generations[g - 1])
+
     end = time.time()
     print(f"Rendering time: {end - start:.4f} s")
     return inverse_traced_child
@@ -46,12 +62,39 @@ def trace_particle(part: bg.BaseParticle,
     return col_suf.get_collision_particle(part, config.rough_surface_child_num, c_param)
 
 
+def trace_particle_wrap(psc: tuple[bg.BaseParticle, list[bg.BaseSurface], rendering_config.RenderingConfig]) -> list[bg.BaseParticle]:
+    return trace_particle(*psc)
+
+
 def trace_particles(particles: list[bg.BaseParticle],
                     surfaces: list[bg.BaseSurface],
                     config: rendering_config.RenderingConfig) -> list[bg.BaseParticle]:
     children = []
     for part in tqdm.tqdm(particles):
         children += trace_particle(part, surfaces, config)
+    return children
+
+
+def _gen_arg(particles: list[bg.BaseParticle],
+             surfaces: list[bg.BaseSurface],
+             config: rendering_config.RenderingConfig) -> Generator[tuple[bg.BaseParticle, list[bg.BaseSurface], rendering_config.RenderingConfig], None, None]:
+    for part in particles:
+        yield part, surfaces, config
+
+
+def trace_particles_para(particles: list[bg.BaseParticle],
+                         surfaces: list[bg.BaseSurface],
+                         config: rendering_config.RenderingConfig,
+                         pool: Pool) -> list[bg.BaseParticle]:
+    trace_res = []
+    with tqdm.tqdm(total=len(particles)) as p_bar:
+        for part in pool.imap_unordered(trace_particle_wrap, _gen_arg(particles, surfaces, config), chunksize=4):
+            trace_res.append(part)
+            p_bar.update(1)
+
+    children = []
+    for res in trace_res:
+        children += res
     return children
 
 
@@ -82,17 +125,35 @@ def inverse_trace(children: list[bg.BaseParticle], parents: list[bg.BaseParticle
     return inverse_traced_parents
 
 
+def _parse_parallel(value: str) -> int | None:
+    if value.isdigit():
+        d = int(value)
+        if d > 1:
+            return d
+        return None
+    if isinstance(value, str):
+        if value.lower() == "auto":
+            return os.cpu_count()
+        if value.lower() == "none":
+            return None
+    raise ValueError(f"Unknown parallel value: {value}")
+
+
 if __name__ == "__main__":
+    __spec__ = None
+
     parser = argparse.ArgumentParser(description='Rendering CG')
     parser.add_argument("world_json_path", help="The json file path describing 3d model.")
     parser.add_argument("-g", "--max-gen", type=int, default=3, help="Max child particle generation.")
-    parser.add_argument("-c", "--child-num", type=int, default=6, help="The number of child created by a parent particle.")
+    parser.add_argument("-c", "--child-num", type=int, default=6,
+                        help="The number of child created by a parent particle.")
+    parser.add_argument("-p", "--parallel", default="auto")
     args = parser.parse_args()
 
     with open(args.world_json_path, "r") as f:
         wd = json.load(f)
     r_config = rendering_config.RenderingConfig(args.max_gen, args.child_num)
     sw = wrd.World.from_dict(wd)
-    inverse_traced = render(sw, r_config)
+    inverse_traced = render(sw, r_config, _parse_parallel(args.parallel))
 
     viewer.show(inverse_traced, sw.camera)
