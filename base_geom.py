@@ -60,21 +60,31 @@ class BaseSurface(metaclass=abc.ABCMeta):
         else:
             self._name = name
 
+        self._basis = None
+        self._basis_norm = None
+        self._norm_vec = None
+
     def get_name(self) -> str:
         return self._name
 
     def get_basis(self) -> np.ndarray:
-        return np.array([self._points[1] - self._points[0], self._points[2] - self._points[0]])
+        if self._basis is None:
+            self._basis = np.array([self._points[1] - self._points[0], self._points[2] - self._points[0]])
+        return self._basis
 
     def get_basis_norm(self) -> np.ndarray:
-        return np.linalg.norm(self.get_basis(), axis=1)
+        if self._basis_norm is None:
+            self._basis_norm = np.linalg.norm(self.get_basis(), axis=1)
+        return self._basis_norm
 
     def get_origin(self) -> np.ndarray:
         return self._points[0]
 
     def get_norm_vec(self) -> np.ndarray:
-        e1, e2 = self.get_basis()
-        return np.cross(e1, e2)
+        if self._norm_vec is None:
+            e1, e2 = self.get_basis()
+            self._norm_vec = np.cross(e1, e2)
+        return self._norm_vec
 
     def get_id(self) -> str:
         return str(self._uuid)
