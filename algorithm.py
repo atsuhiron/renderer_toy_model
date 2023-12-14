@@ -2,9 +2,7 @@ import numpy as np
 import numba
 
 import base_geom
-
-
-NUMBA_OPT = {"nopython": True, "cache": True}
+from const import NUMBA_OPT
 
 
 @numba.jit("f4[:](f4[:])", **NUMBA_OPT)

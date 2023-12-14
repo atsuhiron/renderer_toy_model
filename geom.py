@@ -5,10 +5,12 @@ import uuid
 
 import matplotlib.pyplot as plt
 import numpy as np
+import numba
 
 import chromatic
 import base_geom
 import algorithm
+from const import NUMBA_OPT
 
 
 class Particle(base_geom.BaseParticle):
@@ -132,26 +134,25 @@ class SmoothSurface(base_geom.BaseSurface):
         return SmoothSurface(p1, p2, p3, name)
 
 
-class RoughSurface(base_geom.BaseSurface):
-    SAMPLE_COEF = np.array([np.pi * 0.5, 1], dtype=np.float32)
+@numba.jit(**NUMBA_OPT)
+def _sample_from_cos_distribution(size: int) -> np.ndarray:
+    # TODO: low efficiency
+    samples = np.zeros(size, dtype=np.float32)
+    coef = np.array([np.pi * 0.5, 1], dtype=np.float32)
+    for index in range(size):
+        while True:
+            angle, value = np.random.random(2).astype(np.float32) * coef
+            if angle > value:
+                samples[index] = angle
+                break
+    return samples
 
+
+class RoughSurface(base_geom.BaseSurface):
     def __init__(self, point1: np.ndarray, point2: np.ndarray, point3: np.ndarray,
                  color: chromatic.CColor, name: str = None):
         super().__init__(point1, point2, point3, name)
         self._color = color
-
-    @staticmethod
-    def _sample_from_cos_distribution(size: int) -> np.ndarray:
-        # TODO: low efficiency
-        samples = np.zeros(size)
-
-        for index in range(size):
-            while True:
-                angle, value = np.random.random(2) * RoughSurface.SAMPLE_COEF
-                if angle > value:
-                    samples[index] = angle
-                    break
-        return samples
 
     def get_collision_particle(self, in_part: Particle, num: int, c_param: np.ndarray) -> list[Particle]:
         rel_c_point = self.calc_relative_c_point(c_param)
@@ -160,7 +161,7 @@ class RoughSurface(base_geom.BaseSurface):
         # azimuth, from uniform distribution
         phi = np.random.random(num) * 2 * np.pi
         # zenith, from cosine distribution
-        theta = self._sample_from_cos_distribution(num)
+        theta = _sample_from_cos_distribution(num)
 
         normalized_norm = algorithm.normalize(self.get_norm_vec())
         if np.dot(normalized_norm, in_part.get_vec()) > 0:
