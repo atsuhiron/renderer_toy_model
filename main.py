@@ -147,7 +147,7 @@ if __name__ == "__main__":
     parser.add_argument("-g", "--max-gen", type=int, default=3, help="Max child particle generation.")
     parser.add_argument("-c", "--child-num", type=int, default=6,
                         help="The number of child created by a parent particle.")
-    parser.add_argument("-p", "--parallel", default="auto")
+    parser.add_argument("-p", "--parallel", default="auto", help="The number of process. If the number is less than 2 or 'none' is specified, all procedure is done in the main thread.")
     args = parser.parse_args()
 
     with open(args.world_json_path, "r") as f:
