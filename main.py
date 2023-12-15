@@ -4,6 +4,7 @@ import json
 import time
 import os
 from multiprocessing.pool import Pool
+from concurrent.futures import ProcessPoolExecutor
 
 import numpy as np
 import tqdm
@@ -82,15 +83,37 @@ def _gen_arg(particles: list[bg.BaseParticle],
         yield part, surfaces, config
 
 
+def _gen_arg2(particles: list[bg.BaseParticle],
+              surfaces: list[bg.BaseSurface],
+              config: rendering_config.RenderingConfig,
+              p_bar: tqdm.tqdm) -> Generator[tuple[bg.BaseParticle, list[bg.BaseSurface], rendering_config.RenderingConfig], None, None]:
+    for part in particles:
+        yield part, surfaces, config
+        p_bar.update(1)
+
+
 def trace_particles_para(particles: list[bg.BaseParticle],
                          surfaces: list[bg.BaseSurface],
                          config: rendering_config.RenderingConfig,
                          pool: Pool) -> list[bg.BaseParticle]:
     trace_res = []
     with tqdm.tqdm(total=len(particles)) as p_bar:
-        for part in pool.imap_unordered(trace_particle_wrap, _gen_arg(particles, surfaces, config), chunksize=4):
+        for part in pool.imap_unordered(trace_particle_wrap, _gen_arg(particles, surfaces, config), chunksize=12):
             trace_res.append(part)
             p_bar.update(1)
+
+    children = []
+    for res in trace_res:
+        children += res
+    return children
+
+
+def trace_particles_para2(particles: list[bg.BaseParticle],
+                          surfaces: list[bg.BaseSurface],
+                          config: rendering_config.RenderingConfig,
+                          pool: ProcessPoolExecutor) -> list[bg.BaseParticle]:
+    with tqdm.tqdm(total=len(particles)) as p_bar:
+        trace_res = pool.map(trace_particle_wrap, _gen_arg2(particles, surfaces, config, p_bar), chunksize=12)
 
     children = []
     for res in trace_res:
