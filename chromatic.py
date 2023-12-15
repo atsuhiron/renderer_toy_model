@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import numpy as np
+import numba
+
+from const import NUMBA_OPT
 
 
 class Chromatic:
@@ -53,6 +56,7 @@ def add_color(chr_elements: list[np.ndarray]) -> np.ndarray:
     return np.prod(chr_elements, axis=0)
 
 
+@numba.jit(**NUMBA_OPT)
 def add_light(light_elements: np.ndarray, intensities: np.ndarray) -> tuple[np.ndarray, float]:
     color = (1 - light_elements) * intensities[:, np.newaxis]
     dark_mask = (np.sum(color, axis=1) > 0).astype(np.float32)
