@@ -191,4 +191,4 @@ if __name__ == "__main__":
     sw = wrd.World.from_dict(wd)
     inverse_traced = render(sw, r_config, _parse_parallel(args.parallel))
 
-    viewer.show(inverse_traced, sw.camera)
+    viewer.show(inverse_traced, sw.camera, 0.56)

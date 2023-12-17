@@ -55,8 +55,10 @@ def plot_color_arr(colors: list[np.ndarray]):
     plt.show()
 
 
-def show(particles: list[base_geom.BaseParticle], cam: camera.Camera):
-    color_arr = np.array([p.get_light().to_color().as_uint8() for p in particles], dtype=np.uint8)
+def show(particles: list[base_geom.BaseParticle], cam: camera.Camera, gamma: float = 1.0):
+    color_arr_f4 = np.array([p.get_light().to_color().get_array() for p in particles])
+    # gamma correction
+    color_arr = (np.power(color_arr_f4, gamma) * 255).astype(np.uint8)
     color_arr = color_arr.reshape((cam.pixel_v, cam.pixel_h, 3))
     plt.imshow(color_arr[::-1])
     plt.show()
