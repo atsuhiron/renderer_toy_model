@@ -180,6 +180,9 @@ class RoughSurface(base_geom.BaseSurface):
 
         return out_particles
 
+    def get_color(self) -> chromatic.CColor:
+        return self._color
+
     @staticmethod
     def get_surface_type() -> str:
         return "rough"

@@ -23,15 +23,13 @@ def render(world: wrd.World, config: rendering_config.RenderingConfig, para_num:
 
     start = time.time()
     generations = [cam.create_pixel_particles()]
+    surface_map = {suf.get_id(): suf for suf in world.surfaces}
+
     if para_num is None:
         # Non parallel
         for g in range(1, config.max_generation + 1):
             children = trace_particles(generations[g - 1], world.surfaces, config)
             generations.append(children)
-
-        inverse_traced_child = generations[-1]
-        for g in range(1, config.max_generation + 1)[::-1]:
-            inverse_traced_child = inverse_trace(inverse_traced_child, generations[g - 1], g)
     else:
         # Parallel
         with Pool(para_num) as pool:
@@ -39,9 +37,9 @@ def render(world: wrd.World, config: rendering_config.RenderingConfig, para_num:
                 children = trace_particles_para(generations[g - 1], world.surfaces, config, pool)
                 generations.append(children)
 
-        inverse_traced_child = generations[-1]
-        for g in range(1, config.max_generation + 1)[::-1]:
-            inverse_traced_child = inverse_trace(inverse_traced_child, generations[g - 1], g)
+    inverse_traced_child = generations[-1]
+    for g in range(1, config.max_generation + 1)[::-1]:
+        inverse_traced_child = inverse_trace(inverse_traced_child, generations[g - 1], surface_map, g)
 
     end = time.time()
     print(f"Rendering time: {end - start:.4f} s")
@@ -121,15 +119,27 @@ def trace_particles_para2(particles: list[bg.BaseParticle],
     return children
 
 
-def inverse_trace_child(children: list[bg.BaseParticle], parent: bg.BaseParticle) -> bg.BaseParticle:
+def inverse_trace_child(children: list[bg.BaseParticle],
+                        parent: bg.BaseParticle,
+                        surface_map: dict[str, bg.BaseSurface]) -> bg.BaseParticle:
     light = np.array([c.get_light().get_array() for c in children])
     itst = np.array([c.get_intensity() for c in children])
     synthesis_light, synthesis_itst = chromatic.add_light(light, itst)
     new_light = chromatic.CLight(synthesis_light)
+
+    suf_ids = list(filter(lambda _suf_id: _suf_id is not None, [c.get_last_collided_surface_id() for c in children]))
+    if len(suf_ids) > 0:
+        suf = surface_map[suf_ids[0]]
+        if isinstance(suf, geom.RoughSurface):
+            new_light = new_light.add_color(suf.get_color())
+
     return geom.Particle.create_inverse_traced_particle(parent, new_light, synthesis_itst)
 
 
-def inverse_trace(children: list[bg.BaseParticle], parents: list[bg.BaseParticle], gen: int) -> list[bg.BaseParticle]:
+def inverse_trace(children: list[bg.BaseParticle],
+                  parents: list[bg.BaseParticle],
+                  surface_map: dict[str, bg.BaseSurface],
+                  gen: int | None = None) -> list[bg.BaseParticle]:
     parent_ids = [p.get_parent_ids()[-1] for p in parents]
     family_tree = {pid: [] for pid in parent_ids}
 
@@ -137,12 +147,14 @@ def inverse_trace(children: list[bg.BaseParticle], parents: list[bg.BaseParticle
         family_tree[c.get_parent_ids(False)[-1]].append(c)
 
     inverse_traced_parents = []
-    for index, pid in tqdm.tqdm(enumerate(parent_ids), desc=f"Inv trace {gen}", total=len(parent_ids)):
+    description = f"Inv trace {gen}" if gen is not None else None
+    for index, pid in tqdm.tqdm(enumerate(parent_ids), desc=description, total=len(parent_ids)):
         family = family_tree[pid]
         if len(family) == 0:
             itp = parents[index]
         else:
-            itp = inverse_trace_child(family, parents[index])
+            # collided_suf = surface_map[]
+            itp = inverse_trace_child(family, parents[index], surface_map)
         inverse_traced_parents.append(itp)
 
     return inverse_traced_parents
