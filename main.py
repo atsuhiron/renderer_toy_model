@@ -31,7 +31,7 @@ def render(world: wrd.World, config: rendering_config.RenderingConfig, para_num:
 
         inverse_traced_child = generations[-1]
         for g in range(1, config.max_generation + 1)[::-1]:
-            inverse_traced_child = inverse_trace(inverse_traced_child, generations[g - 1])
+            inverse_traced_child = inverse_trace(inverse_traced_child, generations[g - 1], g)
     else:
         # Parallel
         with Pool(para_num) as pool:
@@ -41,7 +41,7 @@ def render(world: wrd.World, config: rendering_config.RenderingConfig, para_num:
 
         inverse_traced_child = generations[-1]
         for g in range(1, config.max_generation + 1)[::-1]:
-            inverse_traced_child = inverse_trace(inverse_traced_child, generations[g - 1])
+            inverse_traced_child = inverse_trace(inverse_traced_child, generations[g - 1], g)
 
     end = time.time()
     print(f"Rendering time: {end - start:.4f} s")
@@ -129,7 +129,7 @@ def inverse_trace_child(children: list[bg.BaseParticle], parent: bg.BaseParticle
     return geom.Particle.create_inverse_traced_particle(parent, new_light, synthesis_itst)
 
 
-def inverse_trace(children: list[bg.BaseParticle], parents: list[bg.BaseParticle]) -> list[bg.BaseParticle]:
+def inverse_trace(children: list[bg.BaseParticle], parents: list[bg.BaseParticle], gen: int) -> list[bg.BaseParticle]:
     parent_ids = [p.get_parent_ids()[-1] for p in parents]
     family_tree = {pid: [] for pid in parent_ids}
 
@@ -137,7 +137,7 @@ def inverse_trace(children: list[bg.BaseParticle], parents: list[bg.BaseParticle
         family_tree[c.get_parent_ids(False)[-1]].append(c)
 
     inverse_traced_parents = []
-    for index, pid in enumerate(parent_ids):
+    for index, pid in tqdm.tqdm(enumerate(parent_ids), desc=f"Inv trace {gen}", total=len(parent_ids)):
         family = family_tree[pid]
         if len(family) == 0:
             itp = parents[index]
