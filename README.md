@@ -2,7 +2,7 @@
 Rendering 3D CG.
 
 ## Requirement
-Python 3.12
+Python 3.11
 
 ## Installation
 To use it, execute the following command in a directory available `python` command,
