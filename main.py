@@ -34,7 +34,7 @@ def render(world: wrd.World, config: rendering_config.RenderingConfig, para_num:
         # Parallel
         with Pool(para_num) as pool:
             for g in range(1, config.max_generation + 1):
-                children = trace_particles_para(generations[g - 1], world.surfaces, config, pool)
+                children = trace_particles_para(generations[g - 1], world.surfaces, config, pool, para_num)
                 generations.append(children)
 
     inverse_traced_child = generations[-1]
@@ -93,10 +93,12 @@ def _gen_arg2(particles: list[bg.BaseParticle],
 def trace_particles_para(particles: list[bg.BaseParticle],
                          surfaces: list[bg.BaseSurface],
                          config: rendering_config.RenderingConfig,
-                         pool: Pool) -> list[bg.BaseParticle]:
+                         pool: Pool,
+                         para_num: int) -> list[bg.BaseParticle]:
     trace_res = []
+    cs = int(len(particles) / para_num / 10)
     with tqdm.tqdm(total=len(particles)) as p_bar:
-        for part in pool.imap_unordered(trace_particle_wrap, _gen_arg(particles, surfaces, config), chunksize=12):
+        for part in pool.imap_unordered(trace_particle_wrap, _gen_arg(particles, surfaces, config), chunksize=cs):
             trace_res.append(part)
             p_bar.update(1)
 
@@ -109,9 +111,11 @@ def trace_particles_para(particles: list[bg.BaseParticle],
 def trace_particles_para2(particles: list[bg.BaseParticle],
                           surfaces: list[bg.BaseSurface],
                           config: rendering_config.RenderingConfig,
-                          pool: ProcessPoolExecutor) -> list[bg.BaseParticle]:
+                          pool: ProcessPoolExecutor,
+                          para_num: int) -> list[bg.BaseParticle]:
+    cs = int(len(particles) / para_num / 10)
     with tqdm.tqdm(total=len(particles)) as p_bar:
-        trace_res = pool.map(trace_particle_wrap, _gen_arg2(particles, surfaces, config, p_bar), chunksize=12)
+        trace_res = pool.map(trace_particle_wrap, _gen_arg2(particles, surfaces, config, p_bar), chunksize=cs)
 
     children = []
     for res in trace_res:
@@ -191,4 +195,4 @@ if __name__ == "__main__":
     sw = wrd.World.from_dict(wd)
     inverse_traced = render(sw, r_config, _parse_parallel(args.parallel))
 
-    viewer.show(inverse_traced, sw.camera, 0.56)
+    viewer.show(inverse_traced, sw.camera, 0.3)
