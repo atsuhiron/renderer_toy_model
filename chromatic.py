@@ -49,11 +49,7 @@ class CLight(Chromatic):
         return CColor(1 - self.get_array())
 
     def add_color(self, other_color: CColor) -> CLight:
-        return CColor(add_color([self.to_color().get_array(), other_color.get_array()])).to_light()
-
-
-def add_color(chr_elements: list[np.ndarray]) -> np.ndarray:
-    return np.prod(chr_elements, axis=0)
+        return CColor(np.prod([self.to_color().get_array(), other_color.get_array()], axis=0)).to_light()
 
 
 @numba.jit(**NUMBA_OPT)
