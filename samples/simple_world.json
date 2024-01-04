@@ -6,7 +6,8 @@
     "fov_v": 1.57079633,
     "fov_h": 1.57079633,
     "pixel_v": 40,
-    "pixel_h": 40
+    "pixel_h": 40,
+    "camera_mode": "plane"
   },
   "surfaces": [
     {

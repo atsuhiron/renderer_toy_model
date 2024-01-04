@@ -9,7 +9,7 @@ import geom
 
 class Camera:
     def __init__(self, pos: np.ndarray, vec: np.ndarray, focal_length: float,
-                 vertical_fov: float, horizontal_fov: float, vertical_pixel: int, horizontal_pixel: int):
+                 vertical_fov: float, horizontal_fov: float, vertical_pixel: int, horizontal_pixel: int, mode: str):
         self.pos = pos
         self.vec = vec
         self.focal = focal_length
@@ -17,16 +17,41 @@ class Camera:
         self.fov_h = horizontal_fov
         self.pixel_v = vertical_pixel
         self.pixel_h = horizontal_pixel
+        self.camera_mode = mode
 
     def create_pixel_particles(self) -> list[geom.Particle]:
+        if self.camera_mode == "plane":
+            init_particle = self._plane()
+        elif self.camera_mode == "spherical":
+            init_particle = self._spherical()
+        else:
+            assert False, f"Not supported camera mode: {self.camera_mode}"
+
         particles = []
-        for part_vec in self._plane():
+        for part_vec in init_particle:
             part = geom.Particle(self.pos, part_vec)
             particles.append(part)
         return particles
 
     def _spherical(self) -> np.ndarray:
-        pass
+        phi = np.linspace(-self.fov_h / 2, self.fov_h / 2, self.pixel_h)
+        theta = np.linspace(-self.fov_v / 2, self.fov_v / 2, self.pixel_v)
+        pixel_angle = np.zeros((self.pixel_v, self.pixel_h, 3), dtype=np.float32)
+        pixel_angle[:, :, 0], pixel_angle[:, :, 2] = np.meshgrid(phi, theta)
+        pixel_angle = pixel_angle.reshape((self.pixel_v * self.pixel_h, 3))
+        pixel_vec = self.focal * np.sin(pixel_angle)
+
+        # move focal point to origin
+        pixel_vec = pixel_vec + np.array([[0.0, self.focal, 0.0]], dtype=np.float32)
+
+        forward = np.array([0, 1, 0], dtype=np.float32)
+        if not np.all(forward == self.vec):
+            angle = np.arccos(np.dot(forward, self.vec) / np.linalg.norm(self.vec))
+            axial = algorithm.normalize(np.cross(forward, self.vec))
+            for ii in range(self.pixel_v * self.pixel_h):
+                pixel_vec[ii] = algorithm.rotate_vector(pixel_vec[ii], axial, angle)
+
+        return pixel_vec
 
     def _plane(self) -> np.ndarray:
         half_v = self.focal * np.sin(self.fov_v / 2)
@@ -56,7 +81,8 @@ class Camera:
         fov_h = camera_dict["fov_h"]
         pixel_v = camera_dict["pixel_v"]
         pixel_h = camera_dict["pixel_h"]
-        return Camera(pos, vec, focal_length, fov_v, fov_h, pixel_v, pixel_h)
+        camera_mode = camera_dict["camera_mode"]
+        return Camera(pos, vec, focal_length, fov_v, fov_h, pixel_v, pixel_h, camera_mode)
 
 
 if __name__ == "__main__":
