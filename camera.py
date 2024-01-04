@@ -21,14 +21,14 @@ class Camera:
 
     def create_pixel_particles(self) -> list[geom.Particle]:
         if self.camera_mode == "plane":
-            init_particle = self._plane()
+            init_particle_vec = self._plane()
         elif self.camera_mode == "spherical":
-            init_particle = self._spherical()
+            init_particle_vec = self._spherical()
         else:
             assert False, f"Not supported camera mode: {self.camera_mode}"
 
         particles = []
-        for part_vec in init_particle:
+        for part_vec in init_particle_vec:
             part = geom.Particle(self.pos, part_vec)
             particles.append(part)
         return particles
@@ -45,7 +45,7 @@ class Camera:
         pixel_vec = pixel_vec + np.array([[0.0, self.focal, 0.0]], dtype=np.float32)
 
         forward = np.array([0, 1, 0], dtype=np.float32)
-        if not np.all(forward == self.vec):
+        if not self._is_forward_direction():
             angle = np.arccos(np.dot(forward, self.vec) / np.linalg.norm(self.vec))
             axial = algorithm.normalize(np.cross(forward, self.vec))
             for ii in range(self.pixel_v * self.pixel_h):
@@ -64,13 +64,16 @@ class Camera:
         pixel_vec = pixel_vec + np.array([[0.0, self.focal, 0.0]], dtype=np.float32)
 
         forward = np.array([0, 1, 0], dtype=np.float32)
-        if not np.all(forward == self.vec):
+        if not self._is_forward_direction():
             angle = np.arccos(np.dot(forward, self.vec) / np.linalg.norm(self.vec))
             axial = algorithm.normalize(np.cross(forward, self.vec))
             for ii in range(self.pixel_v * self.pixel_h):
                 pixel_vec[ii] = algorithm.rotate_vector(pixel_vec[ii], axial, angle)
 
         return pixel_vec
+
+    def _is_forward_direction(self) -> bool:
+        return self.vec[0] == 0 and self.vec[2] == 0 and self.vec[1] > 0
 
     @staticmethod
     def from_dict(camera_dict: dict[str, Any]) -> Camera:
