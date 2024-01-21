@@ -86,6 +86,8 @@ def calc_main_out_vec(suf: base_geom.BaseSurface, part: base_geom.BaseParticle) 
     norm = normalize(suf.get_norm_vec())
 
     in_vec = -part.get_vec()  # inverse direction
+    if np.dot(norm, in_vec) > 0:
+        norm *= -1
     return rotate_vector(in_vec, norm, np.pi)
 
 
