@@ -93,7 +93,7 @@ def calc_main_out_vec(suf: base_geom.BaseSurface, part: base_geom.BaseParticle) 
 
 def find_collision_surface(part: base_geom.BaseParticle, surfaces: list[base_geom.BaseSurface]) -> tuple[np.ndarray, base_geom.BaseSurface | None]:
     # TODO: need pre filtering (ex. Exclude surface in completely different direction)
-    collisions = []
+    collisions: list[tuple[np.ndarray, base_geom.BaseSurface | None]] = []
     for suf in surfaces:
         if part.get_last_collided_surface_id() == suf.get_id():
             continue
@@ -104,4 +104,5 @@ def find_collision_surface(part: base_geom.BaseParticle, surfaces: list[base_geo
 
     if len(collisions) == 0:
         return -np.ones(3), None
+    collisions = filter(lambda col: col[0][2] >= 0)
     return min(collisions, key=lambda col: col[0][2])
